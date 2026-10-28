@@ -25,6 +25,8 @@ All mandatory deliverables for the **October 29 (6:00 PM)** submission freeze ar
 | **5-Slide Finalist Pitch Deck (PDF)**| [`PITCH_DECK.pdf`](PITCH_DECK.pdf) | PDF (16:9) | High-resolution widescreen slide deck for jury presentation |
 | **5-Slide Finalist Pitch Deck (PPTX)**| [`PITCH_DECK.pptx`](PITCH_DECK.pptx) | PPTX (16:9) | Editable PowerPoint presentation deck with space-tech theme |
 | **Presentation & Defense Guide** | [`PITCH_DECK.md`](PITCH_DECK.md) | Markdown | 5-minute slide-by-slide script and 3-minute jury Q&A defense answers |
+| **Interactive Web Dashboard** | [`dashboard.html`](dashboard.html) | HTML5 / JS Canvas | Standalone, zero-install radar oscilloscope GUI with real-time sliders |
+| **Streamlit Web Application** | [`app.py`](app.py) | Python / Streamlit | Live reactive web dashboard with Matplotlib and CA-CFAR controls |
 | **Publication-Ready Figures** | [`figures/track1/`](figures/track1/) | 8 PNGs (300 DPI)| High-resolution plots for all simulation tasks and bonus experiments |
 
 ---
@@ -155,6 +157,15 @@ python track1_bonus_upgrades.py
 python scripts/generate_pdf_report.py
 python scripts/generate_pitch_deck.py
 python scripts/generate_pitch_deck_pdf.py
+
+# 7. Launch Interactive Radar Dashboard
+# Option A: Zero-install HTML5 GUI (Double-click dashboard.html or serve locally)
+python -m http.server 8501
+# Open in browser: http://localhost:8501/dashboard.html
+
+# Option B: Streamlit Web Application
+pip install streamlit
+streamlit run app.py
 ```
 
 ---
