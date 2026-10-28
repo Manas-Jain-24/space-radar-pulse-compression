@@ -311,7 +311,7 @@ class RadarStressTestSuite:
         snr_micro_cpi_db = snr_micro_db + 10.0 * np.log10(32)
         
         deep_pass = not np.isnan(snr_micro_cpi_db) and not np.isinf(snr_micro_cpi_db)
-        self.log_result("Boundary Stress", "Micro-RCS Deep Space Tracking (350 km, 0.005 m²)", deep_pass,
+        self.log_result("Boundary Stress", "Micro-RCS Deep Space Tracking (350 km, 0.005 m^2)", deep_pass,
                         f"Single Pulse SNR: {snr_micro_db:.2f} dB | After M=32 CPI: {snr_micro_cpi_db:.2f} dB (Detectable!)")
 
         # 4. Zero NaN / Inf Sanity Check Across Large Dynamic Ranges
