@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+figures/*
+!figures/track1/
+*.pdf
+!TECHNICAL_NOTE_IEEE.pdf
+!PITCH_DECK.pdf
+
