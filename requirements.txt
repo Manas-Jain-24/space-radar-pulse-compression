@@ -1,3 +1,7 @@
 numpy>=1.26,<3
 scipy>=1.11,<2
 matplotlib>=3.8,<4
+
+# Deliverable Generators (Technical Note PDF & Pitch Deck PPTX)
+reportlab>=4.0
+python-pptx>=1.0.0

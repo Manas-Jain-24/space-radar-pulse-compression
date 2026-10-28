@@ -1,177 +1,166 @@
-# LFM Radar Simulation
+# Space Radar Pulse Compression & SNR Enhancement Simulation
 
-> **Beyond the Signal: Radar Systems & Applied Space-Tech Research-Athon (Utkrishta 2026)**  
+> **Beyond the Signal: Radar Systems & Applied Space-Tech 24-Hour Research-Athon (Utkrishta 2026)**  
 > **Track 1:** Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement  
-> **Curated by:** Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR  
-> **Organized by:** SSG × Research Club, IIIT Sri City  
+> **Curated by:** Mr. Rajendra Kumar, Scientist, Radar Division, Satish Dhawan Space Centre (SDSC SHAR), ISRO  
+> **Organized by:** Student Satellite Group (SSG) × Research Club, IIIT Sri City  
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Manas-Jain-24/space-radar-pulse-compression/blob/main/track1_radar_notebook.ipynb)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-### Track 1 Quick-Run Deliverables
+## 1. Quick-Access Deliverables
 
-| Deliverable | File Link | Description |
-| :--- | :--- | :--- |
-| **Complete Simulation Script** | [`track1_lfm_simulation.py`](track1_lfm_simulation.py) | Full radar chain ($R=200\text{ km}$, $\text{PRT}=2\text{ ms}$, $B=4\text{ MHz}$, $10\ \mu\text{s}$ vs $100\ \mu\text{s}$, $+10.18\text{ dB}$ SNR proof) |
-| **Bonus Upgrades Script** | [`track1_bonus_upgrades.py`](track1_bonus_upgrades.py) | Multi-target 50 m resolution at 200 km & Mach 5 Doppler coupling with Chirp Diversity |
-| **Interactive Notebook** | [`track1_radar_notebook.ipynb`](track1_radar_notebook.ipynb) | Google Colab / Jupyter runnable notebook with embedded figures |
-| **2-Page Technical Note (PDF)** | [`TECHNICAL_NOTE_IEEE.pdf`](TECHNICAL_NOTE_IEEE.pdf) | Official IEEE 2-column, 2-page research report with math, tables & plots |
-| **2-Page Technical Note (Markdown)** | [`TECHNICAL_NOTE.md`](TECHNICAL_NOTE.md) | GitHub-rendered technical report with Mermaid workflow diagram |
-| **5-Slide Finalist Pitch Deck (PPTX)** | [`PITCH_DECK.pptx`](PITCH_DECK.pptx) | 16:9 Widescreen space-tech presentation deck for faculty jury |
-| **5-Slide Finalist Pitch Deck (PDF)** | [`PITCH_DECK.pdf`](PITCH_DECK.pdf) | High-resolution 16:9 PDF slide deck ready for instant submission/display |
-| **Pitch Presentation Script & Q&A** | [`PITCH_DECK.md`](PITCH_DECK.md) | 5-minute slide-by-slide script and 3-minute jury Q&A defense guide |
-| **High-Resolution Figures** | [`figures/track1/`](figures/track1/) | 7 publication-ready 300 DPI plots (pulse train, spectra, echo, SNR boost, CFAR, multi-target, Doppler coupling) |
+All mandatory deliverables for the **October 29 (6:00 PM)** submission freeze are ready and verifiable:
 
-To run the complete Track 1 simulation and bonus experiments:
-```bash
-python track1_lfm_simulation.py
-python track1_bonus_upgrades.py
-```
-
+| Deliverable | File Link | Format | Description |
+| :--- | :--- | :--- | :--- |
+| **Core Simulation Script** | [`track1_lfm_simulation.py`](track1_lfm_simulation.py) | Python | End-to-end radar chain ($R=200\text{ km}$, $\text{PRT}=2\text{ ms}$, $B=4\text{ MHz}$, $+10.18\text{ dB}$ SNR proof) |
+| **Bonus Upgrades Script** | [`track1_bonus_upgrades.py`](track1_bonus_upgrades.py) | Python | Multi-target 50m resolution, Mach 5 Doppler coupling, and Taylor windowing |
+| **Interactive Colab Notebook** | [`track1_radar_notebook.ipynb`](track1_radar_notebook.ipynb) | Jupyter / Colab | Standalone, 1-click runnable notebook with markdown explanations |
+| **2-Page Technical Note (PDF)** | [`TECHNICAL_NOTE_IEEE.pdf`](TECHNICAL_NOTE_IEEE.pdf) | PDF (2 Pages) | Official IEEE 2-column research report with math, tables & embedded figures |
+| **2-Page Technical Note (Markdown)** | [`TECHNICAL_NOTE.md`](TECHNICAL_NOTE.md) | Markdown | Complete GitHub-rendered report with Mermaid processing pipeline |
+| **5-Slide Finalist Pitch Deck (PDF)**| [`PITCH_DECK.pdf`](PITCH_DECK.pdf) | PDF (16:9) | High-resolution widescreen slide deck for jury presentation |
+| **5-Slide Finalist Pitch Deck (PPTX)**| [`PITCH_DECK.pptx`](PITCH_DECK.pptx) | PPTX (16:9) | Editable PowerPoint presentation deck with space-tech theme |
+| **Presentation & Defense Guide** | [`PITCH_DECK.md`](PITCH_DECK.md) | Markdown | 5-minute slide-by-slide script and 3-minute jury Q&A defense answers |
+| **Publication-Ready Figures** | [`figures/track1/`](figures/track1/) | 8 PNGs (300 DPI)| High-resolution plots for all simulation tasks and bonus experiments |
 
 ---
 
-A Python simulation of a monostatic linear frequency-modulated (LFM) pulse radar, from complex baseband signal generation to range compression, range-Doppler processing, and adaptive CA-CFAR detection.
+## 2. Executive Summary & Physics Formulation
 
-The repository contains five runnable examples, shared numerical routines, and regression tests. Comments, console output, and plot labels are in English.
+In long-range space launch tracking and ballistic surveillance at SDSC SHAR, detecting distant, small radar cross-section objects ($R = 200\text{ km}$, $\text{RCS} = 1.0\text{ m}^2$) requires high radiated pulse energy:
+$$E_t = P_t \cdot \tau_p$$
 
-![Range-Doppler comparison](docs/images/part4_range_doppler.png)
+For simple unmodulated rectangular continuous-wave (CW) pulses, range resolution is tied to pulse duration:
+$$\Delta R_{\text{unmod}} = \frac{c \cdot \tau_p}{2}$$
 
-## What it demonstrates
+Widening an unmodulated pulse from $10\ \mu\text{s}$ to $100\ \mu\text{s}$ increases energy by $10\times$ ($+10\text{ dB}$), but severely degrades range resolution from $1.5\text{ km}$ to **$15.0\text{ km}$**—making precision tracking and target discrimination impossible.
 
-1. **Signal modeling:** causal LFM transmission/echo timing, radar-equation power, Gaussian noise, and a Swerling-0 detection-probability curve.
-2. **Clutter generation:** Weibull inverse-CDF sampling, moment validation, and equal-power shape comparisons.
-3. **Pulse compression:** FFT-based linear correlation, rectangular versus Hann weighting, measured main-lobe widths, and sidelobe levels.
-4. **Range-Doppler processing:** a 64-pulse coherent processing interval, slow-time windowing, and velocity aliasing.
-5. **CA-CFAR detection:** local power estimation, guard/reference cells, adaptive thresholds, and detection margins.
+### The LFM Pulse Compression Solution
+By sweeping carrier frequency across bandwidth $B = 4.0\text{ MHz}$ within pulse duration $\tau_p$:
+$$s(t) = \text{rect}\left(\frac{t}{\tau_p}\right) \exp\left(j \pi k_r t^2\right), \quad k_r = \frac{B}{\tau_p}$$
 
-## Quick start
+The matched filter impulse response $h(t) = s^*(-t)$ compresses the echo into a sinc envelope whose Rayleigh $-3\text{ dB}$ range resolution is governed **exclusively by bandwidth $B$**:
+$$\Delta R = \frac{c}{2B} = \frac{3.0 \times 10^8\text{ m/s}}{2 \times 4.0 \times 10^6\text{ Hz}} = \mathbf{37.5\text{ m}} \quad \text{(Identical for both } 10\ \mu\text{s} \text{ and } 100\ \mu\text{s)}$$
 
-Use **Python 3.10 or newer**. Run these commands from a terminal:
+Because the matched filter integrates total received echo energy $E_r = P_r \cdot \tau_p$, the output peak SNR scales strictly with pulse width:
+$$\Delta \text{SNR}_{\text{MF}} = 10 \log_{10}\left(\frac{\tau_2}{\tau_1}\right) = 10 \log_{10}\left(\frac{100\ \mu\text{s}}{10\ \mu\text{s}}\right) = \mathbf{+10.00\text{ dB}}$$
 
+---
+
+## 3. SDSC SHAR Radar Link Budget & Specifications
+
+| Parameter | Symbol | Value | Operational Note |
+| :--- | :--- | :--- | :--- |
+| **Carrier Frequency** | $f_c$ | $3.0\text{ GHz}$ ($\lambda = 0.1\text{ m}$) | S-band space-tracking radar |
+| **Pulse Repetition Time** | $\text{PRT}$ | $2.0\text{ ms}$ ($\text{PRF} = 500\text{ Hz}$) | Unambiguous range $R_{\text{unamb}} = 300\text{ km}$ |
+| **Chirp Sweep Bandwidth**| $B$ | $4.0\text{ MHz}$ | Nominal range resolution $\Delta R = 37.5\text{ m}$ |
+| **Pulse Width 1** | $\tau_1$ | $10.0\ \mu\text{s}$ ($TB = 40$) | Short pulse (Duty cycle $0.5\%$, Energy $2.5\text{ J}$) |
+| **Pulse Width 2** | $\tau_2$ | $100.0\ \mu\text{s}$ ($TB = 400$) | Long pulse (Duty cycle $5.0\%$, Energy $25.0\text{ J}$) |
+| **Transmit Peak Power** | $P_t$ | $250.0\text{ kW}$ ($53.98\text{ dBW}$) | Typical solid-state space tracking amplifier |
+| **Antenna Gain (Tx & Rx)**| $G$ | $40.0\text{ dBi}$ each ($G = 10^4$) | High-gain parabolic tracking reflector |
+| **Target Range & RCS** | $R_0, \sigma$ | $200.0\text{ km}, 1.0\text{ m}^2$ | Target round-trip delay $\tau_d = 1.333\text{ ms}$ |
+| **Received Target Power**| $P_r$ | $3.95 \times 10^{-14}\text{ W}$ ($-134.04\text{ dBW}$) | Calculated via Monostatic Radar Range Equation |
+| **Noise Spectral Density**| $N_0$ | $7.12 \times 10^{-21}\text{ W/Hz}$ ($-201.48\text{ dBW/Hz}$) | Receiver noise figure $F = 2.5\text{ dB}$ |
+| **Two-Way System Losses**| $L$ | $3.0\text{ dB}$ | Atmospheric attenuation and line losses |
+| **Sampling Frequency** | $f_s$ | $16.0\text{ MHz}$ ($4 \times B$) | Range bin spacing $\delta r = 9.375\text{ m}$ |
+
+---
+
+## 4. Quantitative Results & Benchmark Table
+
+| Metric / Parameter | Pulse 1 ($\tau_1 = 10\ \mu\text{s}$) | Pulse 2 ($\tau_2 = 100\ \mu\text{s}$) | Enhancement / Ratio |
+| :--- | :--- | :--- | :--- |
+| **Radiated Pulse Energy** | $2.50\text{ J}$ | $25.00\text{ J}$ | $\mathbf{+10.0\text{ dB}}$ |
+| **Time-Bandwidth Product ($TB$)** | $40.0$ ($16.02\text{ dB}$) | $400.0$ ($26.02\text{ dB}$) | $\mathbf{+10.0\text{ dB}}$ compression gain |
+| **Theoretical Matched-Filter SNR** | $17.44\text{ dB}$ | $27.44\text{ dB}$ | $\mathbf{+10.00\text{ dB}}$ |
+| **Simulated Measured Peak SNR** | **$17.13\text{ dB}$** | **$27.31\text{ dB}$** | $\mathbf{+10.18\text{ dB}}$ (**Matches theory**) |
+| **Nominal Range Resolution** | $37.50\text{ m}$ | $37.50\text{ m}$ | **Identical ($1.00\times$)** |
+| **Measured Half-Power ($-3\text{ dB}$) Width** | $35.36\text{ m}$ | $34.17\text{ m}$ | **$0.97\times$ (Resolution Preserved)** |
+| **Peak Sidelobe Level (PSL)** | $-10.49\text{ dB}$ | $-11.89\text{ dB}$ | Sampled sinc response |
+| **Required Detection SNR ($P_D=0.9, P_{\text{fa}}=10^{-6}$)**| $13.18\text{ dB}$ | $13.18\text{ dB}$ | Swerling 0 Marcum Q model |
+| **Theoretical Link Margin** | $+4.25\text{ dB}$ (marginal) | $\mathbf{+14.25\text{ dB}}$ (robust) | $\mathbf{+10.00\text{ dB}}$ margin boost |
+| **Adaptive CA-CFAR Target Margin**| $+6.81\text{ dB}$ | $\mathbf{+16.99\text{ dB}}$ | $\mathbf{+10.18\text{ dB}}$ above adaptive threshold |
+
+![Pulse Compression SNR Boost](figures/track1/fig4_pulse_compression_snr_boost.png)
+
+---
+
+## 5. Bonus Space Radar Research Experiments
+
+To demonstrate deep operational radar engineering, three advanced experiments are implemented in [`track1_bonus_upgrades.py`](track1_bonus_upgrades.py):
+
+### Bonus 1: Multi-Target Resolution Demonstration (50 m Separation at 200 km)
+- **Scenario:** Two space objects separated by 50 meters ($R_1 = 200.000\text{ km}$, $R_2 = 200.050\text{ km}$).
+- **Comparison:**
+  - An unmodulated $100\ \mu\text{s}$ CW pulse smears both targets into a single $15\text{ km}$ blob.
+  - The $100\ \mu\text{s}$ LFM chirp cleanly resolves **two distinct peaks separated by 50 meters**!
+- **Plot:** [`figures/track1/fig6_multitarget_resolution.png`](figures/track1/fig6_multitarget_resolution.png)
+
+![Multi-Target Resolution](figures/track1/fig6_multitarget_resolution.png)
+
+---
+
+### Bonus 2: Mach 5 Doppler Coupling & Chirp Diversity Ambiguity Resolution
+- **Scenario:** Space launch vehicle ascending at $v_r = 1500\text{ m/s}$ (Mach 5.0, Doppler $f_d = 30\text{ kHz}$).
+- **Physics:** Range-Doppler coupling shifts the apparent peak by $\Delta R = -c f_d / (2 k_r) = -112.5\text{ m}$ (3 resolution cells!).
+- **Chirp Diversity Solution:** Transmitting alternating Up-Chirps and Down-Chirps decouples range and Doppler:
+  $$R_{\text{estimated}} = \frac{R_{\text{up}} + R_{\text{down}}}{2} = \mathbf{199.9969\text{ km}} \quad (\text{error: only } -3.1\text{ m!})$$
+  $$v_{r,\text{extracted}} = \frac{k_r \lambda (R_{\text{down}} - R_{\text{up}})}{2c} = \mathbf{1500.0\text{ m/s}} \quad (\text{exact velocity extracted!})$$
+- **Plot:** [`figures/track1/fig7_doppler_coupling_and_chirp_diversity.png`](figures/track1/fig7_doppler_coupling_and_chirp_diversity.png)
+
+---
+
+### Bonus 3: Sidelobe Suppression & Weak Target Unmasking (Taylor & Hann)
+- **Scenario:** Strong rocket body ($\text{RCS} = 5.0\text{ m}^2$) at $200.000\text{ km}$ and a faint satellite ($\text{RCS} = 0.05\text{ m}^2$, $20\text{ dB}$ weaker) at $200.080\text{ km}$.
+- **Result:**
+  - Under Rectangular weighting, the strong target's $-13.3\text{ dB}$ sidelobe completely buries the faint satellite.
+  - Applying Taylor weighting ($\bar{n}=4, \text{SLL}=35\text{ dB}$) suppresses sidelobes to $-35.0\text{ dB}$, **cleanly unmasking the weak target** with only $-0.91\text{ dB}$ SNR loss!
+- **Plot:** [`figures/track1/fig8_windowing_sidelobe_suppression.png`](figures/track1/fig8_windowing_sidelobe_suppression.png)
+
+---
+
+## 6. How to Run & Reproduce
+
+### Running in Google Colab (Zero Installation)
+Click the badge at the top or open:
+👉 **[Open in Google Colab](https://colab.research.google.com/github/Manas-Jain-24/space-radar-pulse-compression/blob/main/track1_radar_notebook.ipynb)**
+
+### Running Locally
 ```bash
+# 1. Clone the repository
 git clone https://github.com/Manas-Jain-24/space-radar-pulse-compression.git
 cd space-radar-pulse-compression
-python3 -m venv .venv
+
+# 2. Set up virtual environment
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
 source .venv/bin/activate
-python -m pip install -r requirements.txt
-python run_all.py --no-show
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run Core Simulation (Generates Figs 1 to 5)
+python track1_lfm_simulation.py
+
+# 5. Run Bonus Upgrades (Generates Figs 6, 7, 8)
+python track1_bonus_upgrades.py
+
+# 6. (Optional) Regenerate Technical Note PDF & Finalist Pitch Deck
+python scripts/generate_pdf_report.py
+python scripts/generate_pitch_deck.py
+python scripts/generate_pitch_deck_pdf.py
 ```
 
-On Windows, use `python` in place of `python3` and activate with `.venv\Scripts\activate` in Command Prompt, or `.venv\Scripts\Activate.ps1` in PowerShell.
+---
 
-The command generates **nine PNG figures** in `figures/` and prints numerical summaries. Omit `--no-show` to open interactive plot windows. To run one part or choose an output directory:
-
-```bash
-python part3_pulse_compression.py --no-show
-python part5_ca_cfar.py --no-show --output-dir figures/cfar
-python -m unittest discover -s tests -v
-```
-
-Each script is safe to import: simulation and plotting start only when its `main()` function is called or the script is executed. Random generators use fixed seeds for reproducible examples.
-
-## Repository layout
-
-```text
-space-radar-pulse-compression/
-├── part1_signal_modeling.py
-├── part2_clutter_generation.py
-├── part3_pulse_compression.py
-├── part4_range_doppler.py
-├── part5_ca_cfar.py
-├── radar_utils.py                 # Shared parameters and processing functions
-├── run_all.py                     # Run all five examples
-├── requirements.txt
-├── tests/test_radar.py
-└── docs/images/                   # Selected reproducible figures for this README
-```
-
-Edit the common scenario parameters in `radar_utils.py` before running the scripts. Pulse count is configured in `part4_range_doppler.py`; CFAR reference/guard counts are configured in `part5_ca_cfar.py`. Derived quantities are calculated when modules are imported, so restart the process after changing parameters.
-
-## Default scenario
-
-| Parameter | Value |
-| --- | --- |
-| Carrier frequency | 5.6 GHz |
-| LFM bandwidth | 5 MHz |
-| Pulse duration | 20 us |
-| Transmit peak power | 1.5 MW |
-| Antenna gain (Tx and Rx) | 45 dB |
-| Noise figure / system loss | 1.5 dB / 3 dB |
-| PRF / sampling rate | 2 kHz / 20 MHz |
-| Target range / radial velocity | 35 km / +20 m/s |
-| Target RCS | 0.1 m² (-10 dBsm), Swerling 0 |
-| Clutter shape / sampled-input CNR | Weibull shape 2 / 30 dB |
-| Pulses per CPI | 64 (32 ms) |
-| CFAR reference / guard cells | 16 / 8 **per side** |
-| Nominal CFAR false-alarm probability | 10⁻⁶ per cell |
-
-Positive radial velocity means **closing** motion and positive Doppler throughout this code.
-
-## Example results
-
-These results were produced by the default seeded run with Python 3.12, NumPy 2.3.5, SciPy 1.18.1, and Matplotlib 3.11.2. Small differences may occur across numerical-library versions.
-
-| Quantity | Result |
-| --- | --- |
-| Nominal range resolution, c/(2B) | 30 m |
-| Range sample spacing, c/(2fs) | 7.5 m |
-| Time-bandwidth product | 100 (20 dB) |
-| Ideal thermal-noise matched-filter SNR | 54.09 dB |
-| Required SNR for PD=0.8, Pfa=10⁻⁶, Swerling 0 | 12.57 dB |
-| Sampled thermal-noise matched-filter SNR | 53.95 dB |
-| Rectangular / Hann half-power width | 26.72 / 43.52 m |
-| Rectangular / Hann peak sidelobe | -13.39 / -31.59 dB |
-| Doppler-bin spacing | 0.8371 m/s |
-| Unambiguous velocity interval | [-26.786, +26.786) m/s |
-| Apparent velocity for a -30 m/s target | +23.571 m/s; nearest measured bin +23.438 m/s |
-| Detected target range | 35.0025 km |
-| Target-associated CFAR detection margin | 7.05 dB |
-
-The 2.5 m range error in this realization is **not** 2.5 m range resolution. Resolution, sample spacing, and estimation error describe different properties. Similarly, Doppler-bin spacing alone does not determine minimum detectable velocity.
-
-### Pulse compression and windowing
-
-![Pulse compression window comparison](docs/images/part3_window_comparison.png)
-
-The reference chirp starts at the same local time as the echo. Linear correlation uses enough FFT padding to prevent circular wraparound and returns only lags with complete reference overlap. Half-power widths are interpolated between samples; sidelobes are measured outside the nearest main-lobe minima. Hann weighting broadens the main lobe and has an ideal aligned-pulse SNR loss of approximately 1.77 dB.
-
-### Adaptive detection
-
-![CA-CFAR target neighborhood](docs/images/part5_cfar_target_zoom.png)
-
-CA-CFAR averages the **power** in 32 reference cells, excluding eight guard cells on each side of the CUT. The multiplier is:
-
-```text
-alpha = N * (Pfa^(-1/N) - 1),  N = 32
-threshold = alpha * mean(reference-cell power)
-detection = CUT power > threshold
-```
-
-Cells lacking a full training window have undefined (`NaN`) thresholds and cannot trigger detections. The strongest detection inside a ±60 m association gate is reported as the target detection. Multiple detected cells can belong to one echo; target clustering is not implemented. Empty detection sets are handled explicitly.
-
-## Modeling conventions and limits
-
-- **Power normalization:** complex envelopes satisfy `E[abs(x)**2] = power`. Target amplitude is `sqrt(Pr)`. IID noise at sampling rate `fs` has variance `k_B*T0*F*fs`; `Pn_band = k_B*T0*F*B` is reported separately. This keeps sampled matched-filter SNR consistent with the radar equation. CNR is defined relative to the total sampled-input noise variance.
-- **Chirp and timing:** the causal pulse has local phase `pi*k_r*(t-tau_p/2)^2` for `0 <= t < tau_p`, sweeping approximately from `-B/2` to `+B/2`. Echo delay is modeled continuously and sampled without rounding it to an integer delay first.
-- **Range limits:** the ambiguity limit is 75 km. The full echo must fit before the next pulse, giving a 72 km limit for these scripts. The nominal transmit/receive blanking distance is 3 km; a detailed duplexer/receiver blanking model is not simulated.
-- **Clutter:** independent Weibull amplitudes with uniform random phases form a simplified statistical background. Shape 2 gives circular Gaussian complex samples and a Rayleigh envelope. Part 4 repeats the same clutter realization across pulses, imposing exactly zero clutter Doppler before slow-time windowing. Terrain geometry, spatial correlation, and clutter Doppler spread are not modeled.
-- **Motion:** target range and amplitude remain constant during each CPI; within-pulse and pulse-to-pulse Doppler phase are included. Range migration, acceleration, multipath, and fluctuating RCS are not modeled.
-- **SNR and PD:** the ideal Swerling-0 curve concerns a single pulse in Gaussian noise with a known background. Its SNR margin excludes clutter, window weighting loss, and CFAR loss.
-- **CFAR calibration:** the analytic multiplier assumes independent, identically distributed exponential power samples. Matched filtering and oversampling correlate neighboring cells. Therefore the requested `Pfa=1e-6` is a **nominal setting**, not an empirically established false-alarm rate for this processing chain. Heavy-tailed clutter, clutter edges, and additional targets can further change detection behavior. See the [CFAR detector assumptions](https://www.mathworks.com/help/phased/ref/phased.cfardetector-system-object.html).
-- **Processing scope:** Part 5 performs 1-D CFAR on a single-pulse range profile. It is not a 2-D detector applied to Part 4's range-Doppler map.
-
-## Validation
-
-The 12 regression tests check linear correlation against a direct implementation, range alignment at multiple distances, SNR normalization, noise/clutter power, the Hann trade-off, target Doppler and aliasing, explicit CFAR reference windows, invalid/short inputs, absent-target behavior, and detection-probability limits.
-
-A separate test measures the CFAR false-alarm rate on one million **IID exponential** power samples at `Pfa=1e-3`. This is a quick analytic-baseline check; it does not validate the complete correlated radar chain at `Pfa=1e-6`.
-
-Regenerate the README images from the same scripts with:
-
-```bash
-python part3_pulse_compression.py --no-show --output-dir docs/images
-python part4_range_doppler.py --no-show --output-dir docs/images
-python part5_ca_cfar.py --no-show --output-dir docs/images
-```
+## 7. Team & Acknowledgements
+- **Team Name:** Team Beyond Signals
+- **Event:** Beyond the Signal: Radar Systems & Applied Space-Tech 24-Hour Research-Athon (Utkrishta 2026)
+- **Organized by:** Student Satellite Group (SSG) × Research Club, Indian Institute of Information Technology (IIIT) Sri City
+- **Track Curator:** Mr. Rajendra Kumar, Scientist, Radar Division, Satish Dhawan Space Centre (SDSC SHAR), ISRO
