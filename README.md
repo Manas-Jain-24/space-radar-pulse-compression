@@ -28,7 +28,8 @@ All mandatory deliverables for the **October 29 (6:00 PM)** submission freeze ar
 | **Presentation & Defense Guide** | [`PITCH_DECK.md`](PITCH_DECK.md) | Markdown | 5-minute slide-by-slide script and 3-minute jury Q&A defense answers |
 | **Live Interactive Dashboard** | [**Live Web Demo**](https://manas-jain-24.github.io/space-radar-pulse-compression/) ([`dashboard.html`](dashboard.html)) | Web (GitHub Pages) | Standalone, zero-install radar oscilloscope GUI with real-time sliders |
 | **Streamlit Web Application** | [`app.py`](app.py) | Python / Streamlit | Live reactive web dashboard with Matplotlib and CA-CFAR controls |
-| **Publication-Ready Figures** | [`figures/track1/`](figures/track1/) | 8 PNGs (300 DPI)| High-resolution plots for all simulation tasks and bonus experiments |
+| **Advanced Engineering Suite** | [`advanced_upgrade1_ambiguity.py`](advanced_upgrade1_ambiguity.py) to [`upgrade5`](advanced_upgrade5_hardware_imperfections.py) | Python (5 Modules) | Ambiguity function, CFAR family (GO/SO/OS), CPI Range-Doppler, NLFM, & ADC realism |
+| **Publication-Ready Figures** | [`figures/track1/`](figures/track1/) | 13 PNGs (300 DPI)| High-resolution plots for all core tasks and advanced experiments |
 
 ---
 
@@ -126,6 +127,47 @@ To demonstrate deep operational radar engineering, three advanced experiments ar
 
 ---
 
+### Advanced Upgrade 1: Woodward Ambiguity Function & 3D Delay-Doppler Surface
+- **Script:** [`advanced_upgrade1_ambiguity.py`](advanced_upgrade1_ambiguity.py)
+- **Physics:** Rigorous evaluation of the matched filter response $|\chi(\tau, \nu)|^2$ in range and velocity dimensions.
+- **Result:** Maps the signature sheared diagonal ridge ($\nu + k_r \tau = 0$) proving Doppler tolerance, volume invariance ($\iint |\chi|^2 = 1$), and 40x compression over unmodulated pulses.
+- **Plot:** [`figures/track1/fig9_ambiguity_function_3d_and_contours.png`](figures/track1/fig9_ambiguity_function_3d_and_contours.png)
+
+---
+
+### Advanced Upgrade 2: Advanced CFAR Family Comparison (CA vs. GO vs. SO vs. OS)
+- **Script:** [`advanced_upgrade2_cfar_family.py`](advanced_upgrade2_cfar_family.py)
+- **Scenario A (Multi-Target Masking):** In close spacecraft clusters, CA-CFAR threshold is inflated by Target 1, burying Target 2. **SO-CFAR** drops the threshold, detecting both targets cleanly!
+- **Scenario B (Clutter Boundary Step):** Crossing a $+15\text{ dB}$ clutter edge triggers massive CA-CFAR false alarm bursts. **GO-CFAR** clamps the threshold to the maximum, regulating $P_{\text{fa}} = 10^{-5}$ perfectly!
+- **Plot:** [`figures/track1/fig10_cfar_family_comparison.png`](figures/track1/fig10_cfar_family_comparison.png)
+
+---
+
+### Advanced Upgrade 3: Coherent Processing Interval (CPI) over M=32 Pulses & 2D Range-Doppler Map
+- **Script:** [`advanced_upgrade3_coherent_range_doppler.py`](advanced_upgrade3_coherent_range_doppler.py)
+- **Physics:** Fast-Time / Slow-Time 2D data cube processing over $M = 32$ coherent pulses ($64\text{ ms}$ dwell).
+- **Result:** Coherent integration yields an **additional $+10 \log_{10}(32) = \mathbf{+15.05\text{ dB}}$ SNR enhancement** (total system gain $+41.07\text{ dB}$), while cleanly separating ascending vehicles ($v_r = 1500\text{ m/s}$) from stationary ground/sea clutter at Doppler bin 0!
+- **Plot:** [`figures/track1/fig11_coherent_range_doppler_map.png`](figures/track1/fig11_coherent_range_doppler_map.png)
+
+---
+
+### Advanced Upgrade 4: Nonlinear FM (NLFM) Waveform Design (0.00 dB Mismatch Loss)
+- **Script:** [`advanced_upgrade4_nlfm_waveform.py`](advanced_upgrade4_nlfm_waveform.py)
+- **The Breakthrough:** Windowing (Taylor) reduces sidelobes to $-35\text{ dB}$ but suffers $-0.91\text{ dB}$ SNR mismatch loss. By sweeping instantaneous frequency along a tangent curve, **NLFM achieves $-35.0\text{ dB}$ low sidelobes with ZERO ($0.00\text{ dB}$) SNR mismatch loss**, maintaining constant envelope!
+- **Plot:** [`figures/track1/fig12_nlfm_waveform_vs_lfm.png`](figures/track1/fig12_nlfm_waveform_vs_lfm.png)
+
+---
+
+### Advanced Upgrade 5: Receiver Hardware Realism (ADC Bits, Phase Jitter & I/Q Imbalance)
+- **Script:** [`advanced_upgrade5_hardware_imperfections.py`](advanced_upgrade5_hardware_imperfections.py)
+- **Findings:**
+  - **ADC Quantization:** Matched filter process gain ($+32\text{ dB}$) digs weak signals out even below the ADC LSB; 10-bit and 12-bit ADCs match ideal 64-bit float SNR to within $0.05\text{ dB}$!
+  - **LO Phase Noise:** Phase jitter $\le 5^\circ$ preserves $-35\text{ dB}$ sidelobes; excessive jitter ($>15^\circ$) elevates the sidelobe noise pedestal.
+  - **I/Q Imbalance:** Models quadrature gain and phase skew, demonstrating digital calibration requirements.
+- **Plot:** [`figures/track1/fig13_receiver_hardware_imperfections.png`](figures/track1/fig13_receiver_hardware_imperfections.png)
+
+---
+
 ## 6. How to Run & Reproduce
 
 ### Running in Google Colab (Zero Installation)
@@ -154,7 +196,14 @@ python track1_lfm_simulation.py
 # 5. Run Bonus Upgrades (Generates Figs 6, 7, 8)
 python track1_bonus_upgrades.py
 
-# 6. (Optional) Regenerate Technical Note PDF & Finalist Pitch Deck
+# 6. Run Advanced Engineering Suite (Generates Figs 9 to 13)
+python advanced_upgrade1_ambiguity.py
+python advanced_upgrade2_cfar_family.py
+python advanced_upgrade3_coherent_range_doppler.py
+python advanced_upgrade4_nlfm_waveform.py
+python advanced_upgrade5_hardware_imperfections.py
+
+# 7. (Optional) Regenerate Technical Note PDF & Finalist Pitch Deck
 python scripts/generate_pdf_report.py
 python scripts/generate_pitch_deck.py
 python scripts/generate_pitch_deck_pdf.py
