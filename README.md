@@ -29,6 +29,7 @@ All mandatory deliverables for the **October 29 (6:00 PM)** submission freeze ar
 | **Live Interactive Dashboard** | [**Live Web Demo**](https://manas-jain-24.github.io/space-radar-pulse-compression/) ([`dashboard.html`](dashboard.html)) | Web (GitHub Pages) | Standalone, zero-install radar oscilloscope GUI with real-time sliders |
 | **Streamlit Web Application** | [`app.py`](app.py) | Python / Streamlit | Live reactive web dashboard with Matplotlib and CA-CFAR controls |
 | **Advanced Engineering Suite** | [`advanced_upgrade1_ambiguity.py`](advanced_upgrade1_ambiguity.py) to [`upgrade5`](advanced_upgrade5_hardware_imperfections.py) | Python (5 Modules) | Ambiguity function, CFAR family (GO/SO/OS), CPI Range-Doppler, NLFM, & ADC realism |
+| **Complete Submission Archive** | [`submission_bundle.zip`](submission_bundle.zip) | ZIP Archive (15.9 MB) | Standalone all-in-one archive containing all PDFs, PPTX, scripts, and figures |
 | **Publication-Ready Figures** | [`figures/track1/`](figures/track1/) | 13 PNGs (300 DPI)| High-resolution plots for all core tasks and advanced experiments |
 
 ---
