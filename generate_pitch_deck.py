@@ -257,7 +257,7 @@ def create_deck(filename="PITCH_DECK.pptx"):
     # =========================================================================
     s5 = prs.slides.add_slide(blank_layout)
     set_slide_background(s5)
-    add_header(s5, "Operational Insights, Trade-offs & Conclusions")
+    add_header(s5, "Insights, Bonus Experiments & Conclusion")
 
     # Left: Insights & Trade-offs
     c5a = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.6), Inches(5.6), Inches(5.2))
@@ -265,20 +265,20 @@ def create_deck(filename="PITCH_DECK.pptx"):
     c5a.fill.fore_color.rgb = CARD_BG
     c5a.line.color.rgb = BORDER_COLOR
 
-    tb5a = s5.shapes.add_textbox(Inches(1.0), Inches(1.8), Inches(5.2), Inches(4.8))
+    tb5a = s5.shapes.add_textbox(Inches(1.0), Inches(1.7), Inches(5.2), Inches(5.0))
     tf5a = tb5a.text_frame
     tf5a.word_wrap = True
     p = tf5a.paragraphs[0]
-    p.text = "Operational Insights & Engineering Trade-offs"
+    p.text = "Operational Insights & Bonus Experiments"
     p.font.size = Pt(15)
     p.font.bold = True
     p.font.color.rgb = CYAN_ACCENT
 
     insights = [
-        "Rigorous +10 dB Proof: We mathematically, visually, and empirically verified that expanding pulse duration by 10x yields a +10.18 dB SNR boost while strictly maintaining identical ~35 m range resolution.",
-        "Operational Impact: At 200 km, the 10 μs pulse provides only +4.25 dB link margin (vulnerable to rain fade or pointing loss). The 100 μs pulse provides an ironclad +14.25 dB margin.",
-        "Blind Zone Limitation (Rmin = c·tau / 2): A 100 μs pulse blinds the radar up to 15.0 km (vs 1.5 km for 10 μs). Operational tracking radars solve this with dual-waveform scheduling.",
-        "Doppler Coupling: For high-speed space targets, radial velocity shifts the peak by dt = -fd / kr. Alternating up/down chirps resolves this ambiguity."
+        "Core Proof Verified: Matched-filter SNR increases by +10.18 dB (theory: +10.00 dB) while range resolution remains invariant at ~35 m for both 10 μs and 100 μs chirps.",
+        "Operational Impact: At 200 km, the 100 μs pulse delivers +14.25 dB link margin and +16.99 dB CFAR margin, preventing target loss during rocket staging.",
+        "Bonus Exp 1 (Multi-Target at 200 km): Two targets separated by 50 m merge into a 15 km blob with unmodulated pulses, but are cleanly separated into 2 distinct peaks with LFM compression.",
+        "Bonus Exp 2 (Mach 5 Doppler Coupling): A 1500 m/s rocket induces -112.5 m range bias. We implemented Chirp Diversity (Up/Down chirp pairs), canceling the bias to -3 m and extracting exact velocity (1500 m/s)!"
     ]
     for ins in insights:
         p = tf5a.add_paragraph()
@@ -287,10 +287,13 @@ def create_deck(filename="PITCH_DECK.pptx"):
         p.font.color.rgb = WHITE
         p.space_before = Pt(6)
 
-    # Right: Embed Fig 5 (CA-CFAR)
-    fig5_path = Path("figures/track1/fig5_detection_and_cfar_margin.png")
-    if fig5_path.exists():
-        s5.shapes.add_picture(str(fig5_path), Inches(6.8), Inches(1.6), width=Inches(5.7))
+    # Right: Embed Bonus Plots (Multi-target + Doppler coupling)
+    fig6_path = Path("figures/track1/fig6_multitarget_resolution.png")
+    fig7_path = Path("figures/track1/fig7_doppler_coupling_and_chirp_diversity.png")
+    if fig6_path.exists():
+        s5.shapes.add_picture(str(fig6_path), Inches(6.8), Inches(1.6), width=Inches(5.7))
+    elif fig7_path.exists():
+        s5.shapes.add_picture(str(fig7_path), Inches(6.8), Inches(1.6), width=Inches(5.7))
 
     prs.save(filename)
     print(f"Successfully generated 5-Slide Pitch Deck: {Path(filename).resolve()}")

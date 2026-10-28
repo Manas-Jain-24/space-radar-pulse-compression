@@ -5,6 +5,8 @@
 > **Curated by:** Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR  
 > **Organized by:** SSG × Research Club, IIIT Sri City  
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Manas-Jain-24/space-radar-pulse-compression/blob/main/track1_radar_notebook.ipynb)
+
 ---
 
 ### Track 1 Quick-Run Deliverables
@@ -12,18 +14,21 @@
 | Deliverable | File Link | Description |
 | :--- | :--- | :--- |
 | **Complete Simulation Script** | [`track1_lfm_simulation.py`](track1_lfm_simulation.py) | Full radar chain ($R=200\text{ km}$, $\text{PRT}=2\text{ ms}$, $B=4\text{ MHz}$, $10\ \mu\text{s}$ vs $100\ \mu\text{s}$, $+10.18\text{ dB}$ SNR proof) |
+| **Bonus Upgrades Script** | [`track1_bonus_upgrades.py`](track1_bonus_upgrades.py) | Multi-target 50 m resolution at 200 km & Mach 5 Doppler coupling with Chirp Diversity |
 | **Interactive Notebook** | [`track1_radar_notebook.ipynb`](track1_radar_notebook.ipynb) | Google Colab / Jupyter runnable notebook with embedded figures |
 | **2-Page Technical Note (PDF)** | [`TECHNICAL_NOTE_IEEE.pdf`](TECHNICAL_NOTE_IEEE.pdf) | Official IEEE 2-column, 2-page research report with math, tables & plots |
 | **2-Page Technical Note (Markdown)** | [`TECHNICAL_NOTE.md`](TECHNICAL_NOTE.md) | GitHub-rendered technical report with Mermaid workflow diagram |
 | **5-Slide Finalist Pitch Deck (PPTX)** | [`PITCH_DECK.pptx`](PITCH_DECK.pptx) | 16:9 Widescreen space-tech presentation deck for faculty jury |
 | **5-Slide Finalist Pitch Deck (PDF)** | [`PITCH_DECK.pdf`](PITCH_DECK.pdf) | High-resolution 16:9 PDF slide deck ready for instant submission/display |
 | **Pitch Presentation Script & Q&A** | [`PITCH_DECK.md`](PITCH_DECK.md) | 5-minute slide-by-slide script and 3-minute jury Q&A defense guide |
-| **High-Resolution Figures** | [`figures/track1/`](figures/track1/) | 5 publication-ready 300 DPI plots (pulse train, spectra, echo, SNR boost, CFAR) |
+| **High-Resolution Figures** | [`figures/track1/`](figures/track1/) | 7 publication-ready 300 DPI plots (pulse train, spectra, echo, SNR boost, CFAR, multi-target, Doppler coupling) |
 
-To run the complete Track 1 simulation and regenerate all figures:
+To run the complete Track 1 simulation and bonus experiments:
 ```bash
 python track1_lfm_simulation.py
+python track1_bonus_upgrades.py
 ```
+
 
 ---
 

@@ -259,21 +259,23 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
     story.append(PageBreak())
 
     # =========================================================================
-    # SLIDE 5: INSIGHTS & CONCLUSION
+    # SLIDE 5: INSIGHTS, BONUS EXPERIMENTS & CONCLUSION
     # =========================================================================
     story.append(Paragraph("TRACK 1: RADAR SIGNAL PROCESSING | SDSC SHAR", cat_style))
-    story.append(Paragraph("Operational Insights, Engineering Trade-offs & Conclusions", title_style))
+    story.append(Paragraph("Insights, Bonus Experiments & Conclusions", title_style))
 
     left_p5 = [
-        Paragraph("Operational Insights & Radar Engineering", card_title),
-        Paragraph("• <b>Rigorous +10 dB Proof:</b> Mathematical, visual, and simulated proof that expanding pulse duration by 10x yields a +10.18 dB SNR boost while strictly preserving ~35 m range resolution.", body_style),
-        Paragraph("• <b>Mission-Critical Link Margin:</b> At 200 km, a +4.25 dB margin is vulnerable to rain fade and pointing losses. The 100 μs pulse provides an ironclad +14.25 dB margin, guaranteeing Pd > 99.9%.", body_style),
-        Paragraph("• <b>Blind Zone Trade-off (Rmin = c·τ / 2):</b> A 100 μs pulse blinds the receiver over 15.0 km (vs 1.5 km for 10 μs). Operational tracking radars solve this with dual-waveform scheduling.", body_style),
-        Paragraph("• <b>Doppler Shift Coupling:</b> For high-speed space targets, radial velocity shifts the peak by Δt = -fd / kr. Alternating up/down chirps resolves this range-Doppler ambiguity.", body_style)
+        Paragraph("Operational Insights & Bonus Experiments", card_title),
+        Paragraph("• <b>Core Proof Verified:</b> Matched-filter SNR increases by +10.18 dB (theory: +10.00 dB) while range resolution remains invariant at ~35 m for both 10 μs and 100 μs chirps.", body_style),
+        Paragraph("• <b>Mission-Critical Link Margin:</b> At 200 km, the 100 μs pulse delivers +14.25 dB link margin and +16.99 dB CFAR margin, preventing target loss during rocket staging.", body_style),
+        Paragraph("• <b>Bonus Exp 1 (Multi-Target at 200 km):</b> Two targets separated by 50 m merge into a 15 km blob with unmodulated pulses, but are cleanly separated into 2 distinct peaks with LFM compression.", body_style),
+        Paragraph("• <b>Bonus Exp 2 (Mach 5 Doppler Coupling):</b> A 1500 m/s rocket induces -112.5 m range bias. We implemented Chirp Diversity (Up/Down chirp pairs), canceling the bias to -3 m and extracting exact velocity (1500 m/s)!", body_style)
     ]
 
+    fig6_path = Path("figures/track1/fig6_multitarget_resolution.png")
     fig5_path = Path("figures/track1/fig5_detection_and_cfar_margin.png")
-    right_img5 = Image(str(fig5_path), width=420, height=270) if fig5_path.exists() else Paragraph("Plot missing", body_style)
+    chosen_img = fig6_path if fig6_path.exists() else fig5_path
+    right_img5 = Image(str(chosen_img), width=420, height=270) if chosen_img.exists() else Paragraph("Plot missing", body_style)
 
     t5 = Table([[left_p5, right_img5]], colWidths=[430, 445])
     t5.setStyle(TableStyle([
