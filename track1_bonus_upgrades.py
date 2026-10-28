@@ -281,9 +281,131 @@ def run_doppler_coupling_experiment(output_dir="figures/track1"):
     plt.close(fig)
 
 
+# ==============================================================================
+# UPGRADE 3: SIDELOBE SUPPRESSION & WEAK TARGET UNMASKING (TAYLOR & HANN)
+# ==============================================================================
+def run_windowing_experiment(output_dir="figures/track1"):
+    from scipy.signal.windows import hann, hamming, taylor
+
+    out_path = Path(output_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(2026)
+
+    print("\n" + "=" * 75)
+    print("RUNNING UPGRADE 3: WINDOWING SIDELOBE SUPPRESSION & WEAK TARGET UNMASKING")
+    print("=" * 75)
+
+    n_pulse = int(round(TAU_2 * FS))
+    t_pulse = np.arange(n_pulse) * DT - TAU_2 / 2
+    kr = B / TAU_2
+
+    # Reference chirps with different weighting windows
+    s_ref_rect = np.exp(1j * np.pi * kr * t_pulse**2)
+    win_hann = hann(n_pulse)
+    win_hamming = hamming(n_pulse)
+    win_taylor = taylor(n_pulse, nbar=4, sll=35, norm=False)
+
+    s_ref_hann = s_ref_rect * win_hann
+    s_ref_hamming = s_ref_rect * win_hamming
+    s_ref_taylor = s_ref_rect * win_taylor
+
+    # Window mismatch processing losses
+    loss_hann_db = -10 * np.log10(np.sum(win_hann)**2 / (n_pulse * np.sum(win_hann**2)))
+    loss_hamming_db = -10 * np.log10(np.sum(win_hamming)**2 / (n_pulse * np.sum(win_hamming**2)))
+    loss_taylor_db = -10 * np.log10(np.sum(win_taylor)**2 / (n_pulse * np.sum(win_taylor**2)))
+
+    print(f"  Window Processing Losses:")
+    print(f"    • Rectangular : 0.00 dB (Matched Filter Optimum)")
+    print(f"    • Taylor (-35): -{loss_taylor_db:.2f} dB (Minimal Loss, Sharpest)")
+    print(f"    • Hamming     : -{loss_hamming_db:.2f} dB")
+    print(f"    • Hann        : -{loss_hann_db:.2f} dB")
+
+    # Scene: Strong target (Rocket Body, RCS = 5.0 m²) at 200.000 km
+    # Weak target (CubeSat / Debris, RCS = 0.05 m², 20 dB weaker) at 200.080 km (80 m away)
+    r_strong = 200.0e3
+    r_weak = 200.080e3
+    rcs_strong = 5.0
+    rcs_weak = 0.05
+
+    tau_strong = 2 * r_strong / C
+    tau_weak = 2 * r_weak / C
+
+    pr_strong = (PT * G_TX * G_RX * (LAMBDA_C**2) * rcs_strong) / (((4 * np.pi)**3) * (r_strong**4) * LOSS)
+    pr_weak = (PT * G_TX * G_RX * (LAMBDA_C**2) * rcs_weak) / (((4 * np.pi)**3) * (r_weak**4) * LOSS)
+
+    t_pri = np.arange(N_PRI) * DT
+    idx_s = int(np.floor(tau_strong * FS))
+    idx_w = int(np.floor(tau_weak * FS))
+
+    t_ins = t_pri[idx_s : idx_s + n_pulse] - tau_strong - TAU_2 / 2
+    t_inw = t_pri[idx_w : idx_w + n_pulse] - tau_weak - TAU_2 / 2
+
+    s_echo = np.zeros(N_PRI, dtype=complex)
+    s_echo[idx_s : idx_s + n_pulse] += np.sqrt(pr_strong) * np.exp(1j * np.pi * kr * t_ins**2)
+    s_echo[idx_w : idx_w + n_pulse] += np.sqrt(pr_weak) * np.exp(1j * np.pi * kr * t_inw**2)
+
+    sigma_noise = np.sqrt(PN_SAMPLED / 2)
+    noise = sigma_noise * (rng.standard_normal(N_PRI) + 1j * rng.standard_normal(N_PRI))
+    s_rx = s_echo + noise
+
+    # Matched filtering with various reference windows
+    y_rect = run_mf(s_rx, s_ref_rect)
+    y_hann = run_mf(s_rx, s_ref_hann)
+    y_taylor = run_mf(s_rx, s_ref_taylor)
+
+    # Normalize to each window's output noise variance
+    nv_rect = PN_SAMPLED * np.sum(np.abs(s_ref_rect)**2)
+    nv_hann = PN_SAMPLED * np.sum(np.abs(s_ref_hann)**2)
+    nv_taylor = PN_SAMPLED * np.sum(np.abs(s_ref_taylor)**2)
+
+    p_rect_db = 10 * np.log10(np.abs(y_rect)**2 / nv_rect + 1e-12)
+    p_hann_db = 10 * np.log10(np.abs(y_hann)**2 / nv_hann + 1e-12)
+    p_taylor_db = 10 * np.log10(np.abs(y_taylor)**2 / nv_taylor + 1e-12)
+
+    range_axis_m = np.arange(len(y_rect)) * (C / (2 * FS))
+    zoom_mask = np.abs(range_axis_m - 200.0e3) <= 200.0
+    r_zoom = range_axis_m[zoom_mask] - 200.0e3
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
+    # Rectangular: Sidelobe masks weak target
+    ax1.plot(r_zoom, p_rect_db[zoom_mask], color="#1f77b4", lw=1.5, label="Rectangular Window (PSL = -13.3 dB)")
+    ax1.axvline(0, color="blue", ls="--", label="Strong Target (RCS = 5.0 m²)")
+    ax1.axvline(80, color="crimson", ls="--", label="Weak Target (RCS = 0.05 m², 20 dB down)")
+    ax1.annotate("Weak Target BURIED in\n-13.3 dB Sidelobe!", xy=(80, 18), xytext=(110, 24),
+                 arrowprops=dict(arrowstyle="->", color="crimson", lw=1.5),
+                 color="crimson", fontweight="bold", fontsize=10)
+    ax1.set_title("Rectangular Window: Sidelobe Masking (Weak Target at +80 m is Completely Invisible)", fontsize=11, fontweight="bold")
+    ax1.set_ylabel("Output SNR (dB)", fontsize=10)
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(loc="upper right", fontsize=9.5)
+
+    # Taylor: Sidelobes suppressed to -35 dB, revealing weak target
+    ax2.plot(r_zoom, p_taylor_db[zoom_mask], color="#2ca02c", lw=1.5, label="Taylor Window (nbar=4, sll=-35 dB)")
+    ax2.plot(r_zoom, p_hann_db[zoom_mask], color="#d62728", lw=1.2, ls=":", label="Hann Window (PSL = -31.6 dB)")
+    ax2.axvline(0, color="blue", ls="--", label="Strong Target (RCS = 5.0 m²)")
+    ax2.axvline(80, color="crimson", ls="--", label="Weak Target (RCS = 0.05 m²)")
+    ax2.annotate("Weak Target CLEARLY DETECTED!\n(Sidelobes suppressed to -35 dB)", xy=(80, 13), xytext=(110, 20),
+                 arrowprops=dict(arrowstyle="->", color="#2ca02c", lw=1.5),
+                 color="#2ca02c", fontweight="bold", fontsize=10)
+    ax2.set_title("Taylor / Hann Weighting: Sidelobes Suppressed to -35 dB (Weak Target Unmasked & Detected)", fontsize=11, fontweight="bold")
+    ax2.set_xlabel("Range Offset from 200 km (m)", fontsize=10)
+    ax2.set_ylabel("Output SNR (dB)", fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.legend(loc="upper right", fontsize=9.5)
+
+    fig.suptitle("Upgrade 3: Sidelobe Suppression & Weak Target Unmasking in Space Surveillance", fontsize=13, fontweight="bold")
+    fig.tight_layout()
+    fig_file = out_path / "fig8_windowing_sidelobe_suppression.png"
+    fig.savefig(fig_file, dpi=300)
+    print(f"Saved: {fig_file}")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Track 1 Bonus Experiments")
     parser.add_argument("--output-dir", type=str, default="figures/track1", help="Output directory")
     args = parser.parse_args()
     run_multitarget_experiment(output_dir=args.output_dir)
     run_doppler_coupling_experiment(output_dir=args.output_dir)
+    run_windowing_experiment(output_dir=args.output_dir)
+

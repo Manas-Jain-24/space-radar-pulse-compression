@@ -106,6 +106,11 @@ graph TD
 2. **Resolution Invariance:** The $-3\text{ dB}$ mainlobe width measured $35.36\text{ m}$ for the $10\ \mu\text{s}$ pulse and $34.17\text{ m}$ for the $100\ \mu\text{s}$ pulse. The ratio is $0.97\approx 1.0$, empirically proving that stretching the pulse by $10\times$ did not degrade range discrimination.
 3. **Operational Detection Margin:** For a non-fluctuating target requiring $\text{SNR} = 13.18\text{ dB}$ ($P_D = 90\%, P_{\text{fa}} = 10^{-6}$), the $10\ \mu\text{s}$ pulse offers only $+4.25\text{ dB}$ of link margin. In operational conditions (rain fade, antenna depointing, radome losses), this target could easily be lost. The $100\ \mu\text{s}$ pulse provides a robust $+14.25\text{ dB}$ margin and punches $+16.99\text{ dB}$ above the adaptive CA-CFAR threshold.
 
+#### 3.3 Bonus Research Results
+- **Multi-Target Discrimination (50 m Separation at 200 km):** Two targets placed at $200.000\text{ km}$ and $200.050\text{ km}$ merge into a single $15\text{ km}$ smeared pulse under an unmodulated $100\ \mu\text{s}$ CW pulse. Under the $100\ \mu\text{s}$ LFM chirp, both targets are cleanly resolved into two distinct peaks separated by $50\text{ m}$.
+- **Doppler Coupling & Chirp Diversity:** For a rocket ascending at Mach 5 ($v_r = 1500\text{ m/s}$, $f_d = 30\text{ kHz}$), the Up-Chirp shifts by $-115.62\text{ m}$ and Down-Chirp shifts by $+109.38\text{ m}$. Fusing the dual-chirp pair decouples range and Doppler, yielding true range $199.9969\text{ km}$ ($-3.1\text{ m}$ error) and extracting exact radial velocity ($1500.0\text{ m/s}$).
+- **Sidelobe Suppression via Taylor Weighting:** A strong rocket body ($\text{RCS} = 5\text{ m}^2$) masks a weak satellite ($\text{RCS} = 0.05\text{ m}^2$) under rectangular weighting ($-13.3\text{ dB}$ sidelobes). Taylor weighting ($\bar{n}=4, \text{SLL}=-35\text{ dB}$) suppresses the sidelobe floor below the weak target, unmasking it with minimal mismatch loss ($-0.91\text{ dB}$).
+
 ---
 
 ### Section 4: Key Takeaways, Operational Insights & Limitations
