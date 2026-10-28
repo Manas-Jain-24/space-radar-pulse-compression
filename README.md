@@ -6,6 +6,7 @@
 > **Organized by:** Student Satellite Group (SSG) × Research Club, IIIT Sri City  
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Manas-Jain-24/space-radar-pulse-compression/blob/main/track1_radar_notebook.ipynb)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen?logo=github&style=flat)](https://manas-jain-24.github.io/space-radar-pulse-compression/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -25,7 +26,7 @@ All mandatory deliverables for the **October 29 (6:00 PM)** submission freeze ar
 | **5-Slide Finalist Pitch Deck (PDF)**| [`PITCH_DECK.pdf`](PITCH_DECK.pdf) | PDF (16:9) | High-resolution widescreen slide deck for jury presentation |
 | **5-Slide Finalist Pitch Deck (PPTX)**| [`PITCH_DECK.pptx`](PITCH_DECK.pptx) | PPTX (16:9) | Editable PowerPoint presentation deck with space-tech theme |
 | **Presentation & Defense Guide** | [`PITCH_DECK.md`](PITCH_DECK.md) | Markdown | 5-minute slide-by-slide script and 3-minute jury Q&A defense answers |
-| **Interactive Web Dashboard** | [`dashboard.html`](dashboard.html) | HTML5 / JS Canvas | Standalone, zero-install radar oscilloscope GUI with real-time sliders |
+| **Live Interactive Dashboard** | [**Live Web Demo**](https://manas-jain-24.github.io/space-radar-pulse-compression/) ([`dashboard.html`](dashboard.html)) | Web (GitHub Pages) | Standalone, zero-install radar oscilloscope GUI with real-time sliders |
 | **Streamlit Web Application** | [`app.py`](app.py) | Python / Streamlit | Live reactive web dashboard with Matplotlib and CA-CFAR controls |
 | **Publication-Ready Figures** | [`figures/track1/`](figures/track1/) | 8 PNGs (300 DPI)| High-resolution plots for all simulation tasks and bonus experiments |
 
