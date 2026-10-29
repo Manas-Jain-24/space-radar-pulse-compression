@@ -88,7 +88,7 @@ def create_deck(filename="PITCH_DECK.pptx"):
     p2.space_after = Pt(24)
 
     p3 = tf1.add_paragraph()
-    p3.text = "TRACK 1: Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement\nCurated by: Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR\n\nTeam Name: Team Beyond Signals | Event: 24-Hour Research-Athon (Utkrishta 2026)"
+    p3.text = "TRACK 1: Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement\nCurated by: Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR\n\nTeam: Team Beyond Signals\nMembers: Manas Vinod Jain, Vikhyat Gupta"
     p3.font.size = Pt(12)
     p3.font.color.rgb = GRAY
 

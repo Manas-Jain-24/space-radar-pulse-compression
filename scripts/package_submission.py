@@ -50,6 +50,8 @@ def create_submission_bundle():
         "scripts/generate_pdf_report.py",
         "scripts/generate_pitch_deck.py",
         "scripts/generate_pitch_deck_pdf.py",
+        "scripts/generate_equation_images.py",
+        "scripts/package_submission.py",
     ]
     
     # Add all 13 figures
@@ -58,6 +60,11 @@ def create_submission_bundle():
         for fig_name in sorted(os.listdir(figures_dir)):
             if fig_name.endswith(".png"):
                 files_to_include.append(os.path.join("figures", "track1", fig_name).replace("\\", "/"))
+        equations_dir = os.path.join(figures_dir, "equations")
+        if os.path.exists(equations_dir):
+            for fig_name in sorted(os.listdir(equations_dir)):
+                if fig_name.endswith(".png"):
+                    files_to_include.append(os.path.join("figures", "track1", "equations", fig_name).replace("\\", "/"))
                 
     print("=" * 75)
     print("PACKAGING UTKRISHTA 2026 TRACK 1 SUBMISSION BUNDLE")

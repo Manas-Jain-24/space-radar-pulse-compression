@@ -15,6 +15,7 @@
   - Track 1: Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement
   - Curator: Mr. Rajendra Kumar (Scientist, Radar Division, SDSC SHAR)
   - Team Name: Team Beyond Signals
+  - Team Members: Manas Vinod Jain, Vikhyat Gupta
 - **Presenter Script:**
   > *"Respected jury members and Mr. Rajendra Kumar, today our team presents our research and simulation on Track 1: LFM Radar Pulse Compression and SNR Enhancement. In space launch tracking and orbital surveillance at SDSC SHAR, detecting small radar cross-section objects at 200 kilometers presents a fundamental physics dilemma between pulse energy and range resolution. Today, we show how an LFM chirp architecture achieves an exact +10 dB SNR boost while maintaining sharp 37.5-meter range resolution."*
 

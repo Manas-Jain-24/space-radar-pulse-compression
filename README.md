@@ -147,7 +147,7 @@ space-radar-pulse-compression/
 ├── TECHNICAL_NOTE.md               # Markdown technical documentation
 ├── PITCH_DECK.pdf / .pptx          # 5-Slide finalist presentation deck
 ├── PITCH_DECK.md                   # 5-Minute presentation script & jury Q&A
-├── submission_bundle.zip           # Complete 34-file submission archive (15.86 MB)
+├── submission_bundle.zip           # Complete submission archive with report, deck, code, and plots
 └── requirements.txt                # Python environment dependencies
 ```
 
@@ -224,6 +224,7 @@ streamlit run app.py
 
 ## 8. Team & Acknowledgements
 - **Team Name:** Team Beyond Signals
+- **Team Members:** Manas Vinod Jain, Vikhyat Gupta
 - **Event:** Beyond the Signal: Radar Systems & Applied Space-Tech 24-Hour Research-Athon (Utkrishta 2026)
 - **Organizers:** Student Satellite Group (SSG) × Research Club, IIIT Sri City
 - **Track Curator:** Mr. Rajendra Kumar, Scientist, Radar Division, Satish Dhawan Space Centre (SDSC SHAR), ISRO

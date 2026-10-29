@@ -6,8 +6,25 @@ from reportlab.lib import colors
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 )
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import os
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register TrueType fonts if available
+windows_fonts = {
+    'Helvetica': 'C:/Windows/Fonts/arial.ttf',
+    'Helvetica-Bold': 'C:/Windows/Fonts/arialbd.ttf',
+    'Times-Roman': 'C:/Windows/Fonts/times.ttf',
+    'Times-Bold': 'C:/Windows/Fonts/timesbd.ttf',
+}
+for font_name, font_path in windows_fonts.items():
+    if os.path.exists(font_path):
+        try:
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+        except Exception:
+            pass
 
 # Widescreen 16:9 dimensions: 11 x 6.1875 inches or 13.333 x 7.5 inches (960 x 540 pt)
 PAGE_WIDTH = 960.0
@@ -26,10 +43,12 @@ class SlideDeckCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
+        self.draw_slide_background()
 
     def showPage(self):
         self._saved_page_states.append(dict(self.__dict__))
         self._startPage()
+        self.draw_slide_background()
 
     def save(self):
         num_pages = len(self._saved_page_states)
@@ -39,12 +58,14 @@ class SlideDeckCanvas(canvas.Canvas):
             super().showPage()
         super().save()
 
-    def draw_slide_frame(self, page_count):
+    def draw_slide_background(self):
         self.saveState()
-        # Slide Background
         self.setFillColor(DARK_BG)
         self.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=True, stroke=False)
-        
+        self.restoreState()
+
+    def draw_slide_frame(self, page_count):
+        self.saveState()
         # Bottom bar
         self.setStrokeColor(BORDER)
         self.setLineWidth(1)
@@ -141,7 +162,7 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
     story.append(s1_sub)
     story.append(Spacer(1, 40))
     
-    s1_meta = Paragraph("<b>TRACK 1:</b> Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement<br/><b>Curated by:</b> Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR<br/><br/><b>Team Name:</b> Team Beyond Signals | <b>Date:</b> October 28–29, 2026", ParagraphStyle('S1Meta', parent=styles['Normal'], fontName='Helvetica', fontSize=11, leading=16, textColor=GRAY, alignment=1))
+    s1_meta = Paragraph("<b>TRACK 1:</b> Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement<br/><b>Curated by:</b> Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR<br/><br/><b>Team:</b> Team Beyond Signals<br/><b>Members:</b> Manas Vinod Jain, Vikhyat Gupta | <b>Date:</b> October 28–29, 2026", ParagraphStyle('S1Meta', parent=styles['Normal'], fontName='Helvetica', fontSize=11, leading=16, textColor=GRAY, alignment=1))
     story.append(s1_meta)
     story.append(PageBreak())
 
@@ -166,8 +187,8 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
         Paragraph("• <b>Pulse Widths Compared:</b> 10 μs (TB = 40) vs 100 μs (TB = 400)", body_style),
         Paragraph("• <b>Transmit Peak Power (P_t):</b> 250 kW (53.98 dBW)", body_style),
         Paragraph("• <b>Antenna Gain (G_tx, G_rx):</b> 40.0 dBi each (Beamwidth ~ 1.8°)", body_style),
-        Paragraph("• <b>Target Range & RCS:</b> R = 200.0 km, RCS = 1.0 m² (0 dBsm)", body_style),
-        Paragraph("• <b>Received Power (P_r):</b> 3.95 × 10⁻¹⁴ W (-134.04 dBW, sub-noise)", body_style),
+        Paragraph("• <b>Target Range & RCS:</b> R = 200.0 km, RCS = 1.0 m<sup>2</sup> (0 dBsm)", body_style),
+        Paragraph("• <b>Received Power (P_r):</b> 3.95 × 10<sup>-14</sup> W (-134.04 dBW, sub-noise)", body_style),
         Paragraph("• <b>Noise Figure & Losses:</b> F = 2.5 dB, System Loss L = 3.0 dB", body_style)
     ]
     t2 = Table([[left_p2, right_p2]], colWidths=[430, 440])
@@ -193,7 +214,7 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
     
     # Workflow Steps
     w_cells = [
-        [Paragraph("<b>Step 1: Signal Synthesis</b><br/>PRT = 2 ms, B = 4 MHz, fs = 16 MHz. Dual LFM up-chirps: s(t) = rect(t/τ) exp(j π kr t²). Slope kr1 = 4e11 Hz/s vs kr2 = 4e10 Hz/s.", table_cell),
+        [Paragraph("<b>Step 1: Signal Synthesis</b><br/>PRT = 2 ms, B = 4 MHz, fs = 16 MHz. Dual LFM up-chirps: s(t) = rect(t/τ) exp(j π kr t<sup>2</sup>). Slope kr1 = 4e11 Hz/s vs kr2 = 4e10 Hz/s.", table_cell),
          Paragraph("<b>Step 2: Channel & AWGN</b><br/>Radar Range Equation at R = 200 km (delay 1.333 ms). Circular complex AWGN with discrete-time variance Pn = N0 · fs.", table_cell),
          Paragraph("<b>Step 3: Matched Filter (MF)</b><br/>Zero-padded FFT linear cross-correlation: y(t) = ifft(fft(rx) · conj(fft(ref))). Trims circular convolution artifacts.", table_cell),
          Paragraph("<b>Step 4: Detection & CFAR</b><br/>1-D Cell-Averaging CFAR (Nref=48, Nguard=16, Pfa=1e-6). Link margin verification against Swerling 0 Marcum Q model.", table_cell)]
