@@ -649,7 +649,7 @@ st.markdown("---")
 f_col1, f_col2 = st.columns([3, 1])
 with f_col1:
     st.markdown("""
-    **Team Beyond Signals** | *Beyond the Signal: Radar Systems & Applied Space-Tech 24-Hour Research-Athon (Utkrishta 2026)*  
+    **Team Spaceship** | *Beyond the Signal: Radar Systems & Applied Space-Tech 24-Hour Research-Athon (Utkrishta 2026)*  
     Organized by **Student Satellite Group (SSG) × Research Club, IIIT Sri City**  
     Problem Statement Track 1 Curated by **Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR, ISRO**
     """)

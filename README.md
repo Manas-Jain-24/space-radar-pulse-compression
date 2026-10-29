@@ -223,7 +223,7 @@ streamlit run app.py
 ---
 
 ## 8. Team & Acknowledgements
-- **Team Name:** Team Beyond Signals
+- **Team Name:** Spaceship
 - **Team Members:** Manas Vinod Jain, Vikhyat Gupta
 - **Event:** Beyond the Signal: Radar Systems & Applied Space-Tech 24-Hour Research-Athon (Utkrishta 2026)
 - **Organizers:** Student Satellite Group (SSG) × Research Club, IIIT Sri City

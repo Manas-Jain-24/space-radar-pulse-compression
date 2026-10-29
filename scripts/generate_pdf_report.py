@@ -198,7 +198,7 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
     story.append(Paragraph(title_text, title_style))
     story.append(Spacer(1, 1))
     
-    meta_text = "<b>Track 1:</b> Radar Signal Processing | <b>Curator:</b> Mr. Rajendra Kumar (Scientist, Radar Division, SDSC SHAR)<br/><b>Organization:</b> SSG × Research Club, IIIT Sri City (Utkrishta 2026)"
+    meta_text = "<b>Team Spaceship:</b> Manas Vinod Jain, Vikhyat Gupta<br/><b>Track 1:</b> Radar Signal Processing | <b>Curator:</b> Mr. Rajendra Kumar (Scientist, Radar Division, SDSC SHAR)<br/><b>Organization:</b> SSG × Research Club, IIIT Sri City (Utkrishta 2026)"
     story.append(Paragraph(meta_text, subtitle_style))
     story.append(Spacer(1, 3))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#002B49'), spaceAfter=4))

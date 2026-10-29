@@ -162,7 +162,7 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
     story.append(s1_sub)
     story.append(Spacer(1, 40))
     
-    s1_meta = Paragraph("<b>TRACK 1:</b> Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement<br/><b>Curated by:</b> Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR<br/><br/><b>Team:</b> Team Beyond Signals<br/><b>Members:</b> Manas Vinod Jain, Vikhyat Gupta | <b>Date:</b> October 28–29, 2026", ParagraphStyle('S1Meta', parent=styles['Normal'], fontName='Helvetica', fontSize=11, leading=16, textColor=GRAY, alignment=1))
+    s1_meta = Paragraph("<b>TRACK 1:</b> Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement<br/><b>Curated by:</b> Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR<br/><br/><b>Team:</b> Spaceship<br/><b>Members:</b> Manas Vinod Jain, Vikhyat Gupta | <b>Date:</b> October 28–29, 2026", ParagraphStyle('S1Meta', parent=styles['Normal'], fontName='Helvetica', fontSize=11, leading=16, textColor=GRAY, alignment=1))
     story.append(s1_meta)
     story.append(PageBreak())
 

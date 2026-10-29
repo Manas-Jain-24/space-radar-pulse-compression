@@ -3,6 +3,7 @@
 **Track 1:** Radar Signal Processing — Target Detection, Pulse Compression & SNR Enhancement  
 **Curated by:** Mr. Rajendra Kumar, Scientist, Radar Division, SDSC SHAR  
 **Organized by:** SSG × Research Club, IIIT Sri City  
+**Team Spaceship:** Manas Vinod Jain, Vikhyat Gupta  
 
 ---
 
