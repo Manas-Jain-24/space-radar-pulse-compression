@@ -12,15 +12,15 @@ Executes rigorous stress testing across four operational domains:
      - All 13 Figures validated (PNG headers, non-empty)
      - Google Colab notebook JSON schema validation
   2. Script Execution & Reproducibility Verification:
-     - Executes all 11 core, bonus, and advanced simulation scripts with zero exit codes.
+     - Executes core, bonus, advanced and document generation scripts with zero exit codes.
   3. Monte Carlo & Statistical SNR Consistency:
-     - 100-trial Monte Carlo verification of the +10.0 dB SNR enhancement.
+     - 200-trial Monte Carlo verification of the +10.0 dB SNR enhancement.
      - Confirms 95% confidence interval and standard deviation.
   4. Numerical Boundary & Extreme Dynamics Stress Tests:
      - Fractional delay straddling loss sweep (sub-bin sampling offsets)
      - Extreme orbital velocity (v_r = 7500 m/s, Mach 22, Doppler = 150 kHz)
      - Micro-RCS deep-space tracking (sigma = 0.005 m^2 at R = 350 km)
-     - Zero NaN / Inf floating-point verification across all algorithms.
+     - Finite-output check on the production matched filter.
 """
 
 import os
@@ -32,6 +32,8 @@ import numpy as np
 import scipy.signal as signal
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+import track1_lfm_simulation as radar
 
 class RadarStressTestSuite:
     def __init__(self):
@@ -151,7 +153,9 @@ class RadarStressTestSuite:
             "advanced_upgrade3_coherent_range_doppler.py",
             "advanced_upgrade4_nlfm_waveform.py",
             "advanced_upgrade5_hardware_imperfections.py",
-            "scripts/package_submission.py",
+            "scripts/generate_pdf_report.py",
+            "scripts/generate_pitch_deck.py",
+            "scripts/generate_pitch_deck_pdf.py",
         ]
         
         for script in scripts:
@@ -162,9 +166,10 @@ class RadarStressTestSuite:
             
             try:
                 res = subprocess.run([sys.executable, script_path],
-                                     cwd=BASE_DIR, capture_output=True, text=True, timeout=60)
+                                     cwd=BASE_DIR, capture_output=True, text=True, encoding="utf-8", timeout=60,
+                                     env={**os.environ, "PYTHONIOENCODING": "utf-8", "MPLBACKEND": "Agg"})
                 passed = (res.returncode == 0) and ("Traceback" not in res.stderr)
-                err_msg = res.stderr.strip()[:100] if not passed else "Execution clean (code 0)"
+                err_msg = res.stderr.strip()[-2000:] if not passed else "Execution clean (code 0)"
                 self.log_result("Execution", f"Execute: {script}", passed, err_msg)
             except subprocess.TimeoutExpired:
                 self.log_result("Execution", f"Execute: {script}", False, "Timeout after 60s")
@@ -174,76 +179,17 @@ class RadarStressTestSuite:
     # =========================================================================
     # SUITE 3: Monte Carlo & Statistical SNR Consistency
     # =========================================================================
-    def test_monte_carlo_snr_consistency(self, n_trials=50):
+    def test_monte_carlo_snr_consistency(self, n_trials=200):
         print("\n" + "=" * 80)
         print(f"SUITE 3: MONTE CARLO STATISTICAL SNR CONSISTENCY ({n_trials} TRIALS)")
         print("=" * 80)
         
-        c = 3.0e8
-        B = 4.0e6
-        tau1 = 10.0e-6
-        tau2 = 100.0e-6
-        fs = 16.0e6
-        dt = 1.0 / fs
-        PRT = 2.0e-3
-        N_total = int(round(PRT * fs))
-        
-        n_p1 = int(round(tau1 * fs))
-        n_p2 = int(round(tau2 * fs))
-        
-        kr1 = B / tau1
-        kr2 = B / tau2
-        
-        t1 = np.arange(n_p1) * dt - tau1 / 2.0
-        t2 = np.arange(n_p2) * dt - tau2 / 2.0
-        
-        s1 = np.exp(1j * np.pi * kr1 * (t1 ** 2))
-        s2 = np.exp(1j * np.pi * kr2 * (t2 ** 2))
-        
-        h1 = np.conj(s1[::-1])
-        h2 = np.conj(s2[::-1])
-        
-        tau_d = 2.0 * 200.0e3 / c
-        idx_t = int(round(tau_d * fs))
-        idx_s1 = int(round((tau_d - tau1 / 2.0) * fs))
-        idx_s2 = int(round((tau_d - tau2 / 2.0) * fs))
-        
-        echo_amp = 1.0
-        sigma_noise = 0.5
-        
-        snr_boosts = []
-        
-        for seed in range(n_trials):
-            np.random.seed(seed)
-            noise = (sigma_noise / np.sqrt(2.0)) * (np.random.randn(N_total) + 1j * np.random.randn(N_total))
-            
-            rx1 = np.copy(noise)
-            rx1[idx_s1 : idx_s1 + n_p1] += echo_amp * s1
-            
-            rx2 = np.copy(noise)
-            rx2[idx_s2 : idx_s2 + n_p2] += echo_amp * s2
-            
-            comp1 = np.abs(signal.fftconvolve(rx1, h1, mode='same')) ** 2
-            comp2 = np.abs(signal.fftconvolve(rx2, h2, mode='same')) ** 2
-            
-            peak1 = np.max(comp1[idx_t - 20 : idx_t + 20])
-            peak2 = np.max(comp2[idx_t - 20 : idx_t + 20])
-            
-            noise1 = np.mean(comp1[idx_t + 500 : idx_t + 1500])
-            noise2 = np.mean(comp2[idx_t + 500 : idx_t + 1500])
-            
-            snr1 = 10.0 * np.log10(peak1 / noise1)
-            snr2 = 10.0 * np.log10(peak2 / noise2)
-            
-            snr_boosts.append(snr2 - snr1)
-            
-        mean_boost = np.mean(snr_boosts)
-        std_boost = np.std(snr_boosts)
-        
-        # Theoretical boost is exactly 10.00 dB
-        is_consistent = (abs(mean_boost - 10.0) <= 0.35) and (std_boost <= 0.6)
-        self.log_result("Monte Carlo", f"Mean SNR Boost over {n_trials} Trials", is_consistent,
-                        f"Mean: +{mean_boost:.2f} dB (Std: {std_boost:.2f} dB, 95% CI: [{mean_boost - 1.96*std_boost:.2f}, {mean_boost + 1.96*std_boost:.2f}])")
+        result = radar.monte_carlo_snr(n_trials)
+        mean, std = result["mean_boost_db"], result["std_boost_db"]
+        lo, hi = result["mean_ci95_db"]
+        self.log_result("Monte Carlo", f"Production SNR Boost over {n_trials} Trials",
+                        lo <= 10 <= hi and abs(mean - 10) < 0.35,
+                        f"Mean: {mean:.2f} dB; Std: {std:.2f} dB; 95% CI for mean: [{lo:.2f}, {hi:.2f}]")
 
     # =========================================================================
     # SUITE 4: Numerical Boundary & Extreme Dynamics Stress Tests
@@ -280,21 +226,15 @@ class RadarStressTestSuite:
         self.log_result("Boundary Stress", "Fractional Delay Straddling Loss", straddle_pass,
                         f"Worst-case straddling drop: {max_straddling_loss_db:.2f} dB (Tolerance: <= 1.2 dB)")
 
-        # 2. Extreme Orbital Dynamics (Mach 22, vr = 7500 m/s)
-        vr_extreme = 7500.0  # Orbital re-entry velocity
-        lambda_c = c / 3.0e9  # 0.1 m
-        fd_extreme = 2.0 * vr_extreme / lambda_c  # 150 kHz
-        coupling_bias_extreme = -c * fd_extreme / (2.0 * kr)
-        
-        # Decoupling verification with Up and Down chirps
-        r_up = 200.0e3 + coupling_bias_extreme
-        r_down = 200.0e3 - coupling_bias_extreme
-        recovered_r = (r_up + r_down) / 2.0
-        recovered_v = (kr * lambda_c * (r_down - r_up)) / (2.0 * c)
-        
-        dyn_pass = (abs(recovered_r - 200.0e3) < 1.0) and (abs(recovered_v - vr_extreme) < 1.0)
-        self.log_result("Boundary Stress", "Mach 22 (7500 m/s) Doppler Decoupling", dyn_pass,
-                        f"Doppler: {fd_extreme/1e3:.1f} kHz | Recovered R: {recovered_r/1e3:.4f} km | vr: {recovered_v:.1f} m/s")
+        # Exercise the production waveform echo and matched-filter estimator.
+        from tempfile import TemporaryDirectory
+        from track1_bonus_upgrades import run_doppler_coupling_experiment
+        with TemporaryDirectory() as output:
+            estimates = run_doppler_coupling_experiment(output_dir=output, vr_true=7500.0)
+        dyn_pass = abs(estimates["range_error_m"]) < radar.SAMPLE_SPACING and abs(estimates["velocity_ms"] - 7500) < 65
+        self.log_result("Boundary Stress", "7500 m/s waveform Doppler decoupling", dyn_pass,
+                        f"Range error: {estimates['range_error_m']:.2f} m; velocity: {estimates['velocity_ms']:.1f} m/s")
+        lambda_c = c / 3e9
 
         # 3. Micro-RCS Deep Space Tracking (sigma = 0.005 m^2 at 350 km)
         Pt = 250.0e3
@@ -310,9 +250,10 @@ class RadarStressTestSuite:
         # With coherent integration M=32 pulses:
         snr_micro_cpi_db = snr_micro_db + 10.0 * np.log10(32)
         
-        deep_pass = not np.isnan(snr_micro_cpi_db) and not np.isinf(snr_micro_cpi_db)
+        # This ideal integration estimate is below our single-cell detection requirement.
+        deep_pass = np.isfinite(snr_micro_cpi_db) and snr_micro_cpi_db < 13.18
         self.log_result("Boundary Stress", "Micro-RCS Deep Space Tracking (350 km, 0.005 m^2)", deep_pass,
-                        f"Single Pulse SNR: {snr_micro_db:.2f} dB | After M=32 CPI: {snr_micro_cpi_db:.2f} dB (Detectable!)")
+                        f"Single Pulse SNR: {snr_micro_db:.2f} dB | Ideal M=32 CPI: {snr_micro_cpi_db:.2f} dB (below 13.18 dB requirement; 350 km exceeds the 300 km PRI range)")
 
         # 4. Zero NaN / Inf Sanity Check Across Large Dynamic Ranges
         test_inputs = [
@@ -324,11 +265,11 @@ class RadarStressTestSuite:
         has_nans = False
         for inp in test_inputs:
             h = np.ones(100, dtype=complex)
-            out = signal.fftconvolve(inp, h, mode='same')
+            out = radar.matched_filter(inp, h)
             if np.any(np.isnan(out)) or np.any(np.isinf(out)):
                 has_nans = True
                 break
-        self.log_result("Boundary Stress", "Floating-Point Dynamic Range (No NaN/Inf)", not has_nans,
+        self.log_result("Boundary Stress", "Production filter finite-output check", not has_nans,
                         "Robust from 1e-15 to 1e12 amplitude spans")
 
     # =========================================================================
@@ -350,8 +291,12 @@ def run_stress_test_suite():
     suite = RadarStressTestSuite()
     suite.test_deliverables_integrity()
     suite.test_script_execution()
-    suite.test_monte_carlo_snr_consistency(n_trials=50)
+    suite.test_monte_carlo_snr_consistency(n_trials=200)
     suite.test_numerical_and_boundary_stress()
+    import unittest
+    regressions = unittest.defaultTestLoader.discover(os.path.join(BASE_DIR, "tests"), pattern="test_regressions.py")
+    result = unittest.TextTestRunner(verbosity=2).run(regressions)
+    suite.log_result("Regression", "Numerical regression suite", result.wasSuccessful())
     success = suite.print_summary()
     return 0 if success else 1
 

@@ -18,12 +18,13 @@ import streamlit as st
 import numpy as np
 import scipy.signal as signal
 import matplotlib.pyplot as plt
+from track1_lfm_simulation import ca_cfar
 
 # ---------------------------------------------------------
 # Page Configuration & Styling
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="SDSC SHAR Space Radar Simulation | Utkrishta 2026",
+    page_title="Synthetic S-band Radar Simulation | Utkrishta 2026",
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -165,7 +166,7 @@ add_noise = st.sidebar.checkbox("Include Thermal AWGN Noise", value=True)
 # ---------------------------------------------------------
 # Header & Badges
 # ---------------------------------------------------------
-st.markdown('<div class="main-header">SDSC SHAR Space Radar Simulation Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">Synthetic S-band Radar Simulation Dashboard</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="sub-header">
     <span class="badge-pill badge-isro">SDSC SHAR / ISRO Track 1</span>
@@ -275,6 +276,9 @@ r_axis_km = (c * t_axis / 2.0) / 1e3
 # Target delay & doppler
 tau_d = 2.0 * R0 / c
 fd = 2.0 * vr_ms / lambda_c
+if tau_d + tau2 > PRT or tau_d < tau2:
+    st.error("Target is outside the valid receive window for this PRT and pulse duration. Choose a range beyond the transmit blind zone and below the echo-fit limit.")
+    st.stop()
 
 def simulate_chain(tau_p, window_type="Rectangular (Unweighted)", add_second_target=False, sep_m=50.0, rcs_ratio_db=0.0):
     kr = B / tau_p
@@ -287,6 +291,7 @@ def simulate_chain(tau_p, window_type="Rectangular (Unweighted)", add_second_tar
     
     # Target 1
     t_start1 = tau_d - tau_p / 2.0
+    amp1 = np.sqrt(Pr)
     idx_start1 = int(round(t_start1 * fs))
     if 0 <= idx_start1 < N_total - n_pulse:
         t_rx1 = t_axis[idx_start1 : idx_start1 + n_pulse]
@@ -308,7 +313,8 @@ def simulate_chain(tau_p, window_type="Rectangular (Unweighted)", add_second_tar
     # Thermal Noise
     if add_noise:
         sigma_n = np.sqrt(N0 * fs / 2.0)
-        noise = sigma_n * (np.random.randn(N_total) + 1j * np.random.randn(N_total))
+        rng = np.random.default_rng(2026)
+        noise = sigma_n * (rng.standard_normal(N_total) + 1j * rng.standard_normal(N_total))
         rx_signal += noise
         
     # Matched Filter Template
@@ -336,7 +342,8 @@ def simulate_chain(tau_p, window_type="Rectangular (Unweighted)", add_second_tar
     right_noise = compressed_power[min(N_total - 1, peak_idx + win_w) : min(N_total, peak_idx + 3 * win_w)]
     noise_pool = np.concatenate([left_noise, right_noise])
     noise_mean = np.mean(noise_pool) if len(noise_pool) > 0 else 1.0
-    peak_val = np.max(compressed_power[max(0, peak_idx - 20) : min(N_total, peak_idx + 20)])
+    expected_idx = peak_idx + int(round(-fd / kr * fs))
+    peak_val = np.max(compressed_power[max(0, expected_idx - 20) : min(N_total, expected_idx + 21)])
     measured_snr_db = 10.0 * np.log10(peak_val / (noise_mean + 1e-30))
     
     return rx_signal, compressed_power, measured_snr_db
@@ -358,14 +365,14 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.subheader("Verification of +10 dB SNR Enhancement with Invariant Resolution")
     st.markdown(f"""
-    At range $R = {R0_km:.1f}\text{ km}$, the round-trip radar travel time is $\\tau_d = 2R/c = {tau_d*1e3:.3f}\text{ ms}$.
-    Both pulses have identical bandwidth $B = {B_mhz:.1f}\text{ MHz}$, yielding an identical nominal range resolution of $\\Delta R = {delta_R_nominal:.1f}\text{ m}$.
+    At range $R = {R0_km:.1f}\\text{{ km}}$, the round-trip radar travel time is $\\tau_d = 2R/c = {tau_d*1e3:.3f}\\text{{ ms}}$.
+    Both pulses have identical bandwidth $B = {B_mhz:.1f}\\text{{ MHz}}$, yielding an identical nominal range resolution of $\\Delta R = {delta_R_nominal:.1f}\\text{{ m}}$.
     """)
     
     with st.spinner("Simulating matched filter compression..."):
-        np.random.seed(42)
+        np.random.seed(2026)
         rx1, comp1, snr1_meas = simulate_chain(tau1, window_choice)
-        np.random.seed(42)
+        np.random.seed(2026)
         rx2, comp2, snr2_meas = simulate_chain(tau2, window_choice)
         
     comp1_db = 10.0 * np.log10(comp1 / np.max(comp2) + 1e-30)
@@ -400,10 +407,10 @@ with tab1:
     
     ax2.plot(r_zoom_m, comp1_zoom_norm, label=f"τ₁ = {tau1_us:.0f} µs Mainlobe", color="#38bdf8", lw=1.6)
     ax2.plot(r_zoom_m, comp2_zoom_norm, label=f"τ₂ = {tau2_us:.0f} µs Mainlobe", color="#ec4899", lw=1.6, linestyle="--")
-    ax2.axhline(-3.0, color="#fbbf24", linestyle=":", lw=1.5, label="Rayleigh -3 dB Width (37.5 m)")
+    ax2.axhline(-3.0, color="#fbbf24", linestyle=":", lw=1.5, label="Half-power reference (-3 dB)")
     ax2.set_xlabel("Range Relative to Target (meters)", color="#cbd5e1", fontsize=10, fontweight="bold")
     ax2.set_ylabel("Normalized Mainlobe Power (dB)", color="#cbd5e1", fontsize=10, fontweight="bold")
-    ax2.set_title("Zoomed Profile: Resolution Invariance\nBoth Pulses Exhibit Identical -3 dB Mainlobe Width", color="#f8fafc", fontsize=11, fontweight="bold")
+    ax2.set_title("Zoomed Profile: Resolution Invariance\nCompare the compressed mainlobes; noise and weighting affect width", color="#f8fafc", fontsize=11, fontweight="bold")
     ax2.set_ylim(-30, 2)
     ax2.set_xlim(-250, 250)
     ax2.legend(loc="upper right", facecolor="#0f172a", edgecolor="#334155", labelcolor="#f8fafc", fontsize=9)
@@ -411,7 +418,7 @@ with tab1:
     plt.tight_layout()
     st.pyplot(fig)
     
-    st.info(f"💡 **Empirical Proof:** At $R = {R0_km:.1f}\\text{{ km}}$, widening pulse duration from ${tau1_us:.0f}\\ \\mu\\text{{s}}$ to ${tau2_us:.0f}\\ \\mu\\text{{s}}$ delivers **+{snr2_meas - snr1_meas:.2f} dB** of SNR gain, while preserving the exact same ${delta_R_nominal:.1f}\\text{{ m}}$ Rayleigh range resolution!")
+    st.info(f"💡 **Empirical Proof:** At $R = {R0_km:.1f}\\text{{ km}}$, widening pulse duration from ${tau1_us:.0f}\\ \\mu\\text{{s}}$ to ${tau2_us:.0f}\\ \\mu\\text{{s}}$ delivers **+{snr2_meas - snr1_meas:.2f} dB** of SNR gain, with nominal unweighted resolution ${delta_R_nominal:.1f}\\text{{ m}}$ Rayleigh range resolution!")
 
 # ---------------------------------------------------------
 # TAB 2: CA-CFAR Detection & Link Margin
@@ -435,15 +442,12 @@ with tab2:
     **Adaptive Threshold Factor:** $\\alpha = N_{{ref}} \\cdot (P_{{fa}}^{{-1/N_{{ref}}}} - 1) = \\mathbf{{{alpha_cfar:.3f}}}$ (for $N_{{ref}} = {N_ref}$ reference cells and $P_{{fa}} = 10^{{-{pfa_exp}}}$).
     """)
     
-    # Compute CA-CFAR threshold on comp2
-    kernel = np.ones(2 * (n_train + n_guard) + 1)
-    kernel[n_train : n_train + 2 * n_guard + 1] = 0.0
-    kernel = kernel / (2 * n_train)
-    noise_est = np.convolve(comp2, kernel, mode="same")
-    cfar_threshold = alpha_cfar * noise_est
-    
-    cfar_target_margin = 10.0 * np.log10(np.max(comp2) / cfar_threshold[int(round(tau_d * fs))])
-    
+    cfar_threshold, detections, _ = ca_cfar(comp2, n_ref=n_train, n_guard=n_guard, pfa=pfa)
+    expected_idx = int(round((tau_d - fd / (B / tau2)) * fs))
+    lo, hi = max(0, expected_idx - 20), min(N_total, expected_idx + 21)
+    target_idx = lo + int(np.argmax(comp2[lo:hi]))
+    cfar_target_margin = 10 * np.log10(comp2[target_idx] / cfar_threshold[target_idx])
+
     fig_cfar, ax_cf = plt.subplots(figsize=(12, 4.5), facecolor="#080d1a")
     ax_cf.set_facecolor("#0b1329")
     ax_cf.grid(True, linestyle="--", alpha=0.35, color="#64748b")
@@ -455,7 +459,7 @@ with tab2:
     r_cf_max = R0_km + 2.5
     m_cf = (r_axis_km >= r_cf_min) & (r_axis_km <= r_cf_max)
     
-    ref_norm = np.median(noise_est)
+    ref_norm = np.nanmedian(cfar_threshold / alpha_cfar)
     sig_db = 10.0 * np.log10(comp2[m_cf] / ref_norm + 1e-30)
     thr_db = 10.0 * np.log10(cfar_threshold[m_cf] / ref_norm + 1e-30)
     
@@ -464,13 +468,13 @@ with tab2:
     ax_cf.axvline(R0_km, color="#10b981", linestyle=":", lw=1.2, label=f"True Target Range ({R0_km:.1f} km)")
     ax_cf.set_xlabel("Range (km)", color="#cbd5e1", fontsize=10, fontweight="bold")
     ax_cf.set_ylabel("Power relative to Noise Floor (dB)", color="#cbd5e1", fontsize=10, fontweight="bold")
-    ax_cf.set_title(f"Adaptive CA-CFAR Target Detection at 200 km\nTarget Margin Above Threshold: +{cfar_target_margin:.2f} dB", color="#f8fafc", fontsize=11, fontweight="bold")
+    ax_cf.set_title(f"Adaptive CA-CFAR Target Detection at {R0_km:.1f} km\nTarget Margin Above Threshold: +{cfar_target_margin:.2f} dB", color="#f8fafc", fontsize=11, fontweight="bold")
     ax_cf.legend(loc="upper right", facecolor="#0f172a", edgecolor="#334155", labelcolor="#f8fafc", fontsize=9)
     
     plt.tight_layout()
     st.pyplot(fig_cfar)
     
-    st.success(f"✅ **Detection Confirmed:** Target peak exceeds the adaptive threshold with a massive **+{cfar_target_margin:.2f} dB** margin, ensuring zero false alarms while reliably detecting small RCS objects.")
+    st.write(f"Target-local CFAR margin: {cfar_target_margin:+.2f} dB. Detection: {bool(detections[target_idx])}. Nominal Pfa assumes independent exponential cells; oversampled matched-filter cells are correlated.")
 
 # ---------------------------------------------------------
 # TAB 3: Multi-Target Resolution (50m Separation)
@@ -481,13 +485,13 @@ with tab3:
     sep_m = st.slider("Target Separation Distance (meters)", min_value=10.0, max_value=200.0, value=50.0, step=5.0)
     
     st.markdown(f"""
-    - **Target 1:** $R_1 = {R0_km:.3f}\text{{ km}}$, $\text{{RCS}} = {rcs_m2:.1f}\text{{ m}}^2$
-    - **Target 2:** $R_2 = {R0_km + sep_m/1e3:.3f}\text{{ km}}$, $\text{{RCS}} = {rcs_m2:.1f}\text{{ m}}^2$
-    - **Nominal Resolution Limit:** $\\Delta R = c/(2B) = {delta_R_nominal:.1f}\text{{ m}}$
+    - **Target 1:** $R_1 = {R0_km:.3f}\\text{{ km}}$, $\\text{{RCS}} = {rcs_m2:.1f}\\text{{ m}}^2$
+    - **Target 2:** $R_2 = {R0_km + sep_m/1e3:.3f}\\text{{ km}}$, $\\text{{RCS}} = {rcs_m2:.1f}\\text{{ m}}^2$
+    - **Nominal Resolution Limit:** $\\Delta R = c/(2B) = {delta_R_nominal:.1f}\\text{{ m}}$
     """)
     
     with st.spinner("Simulating multi-target echo..."):
-        np.random.seed(42)
+        np.random.seed(2026)
         _, comp_multi_lfm, _ = simulate_chain(tau2, window_choice, add_second_target=True, sep_m=sep_m)
         
     # Unmodulated CW comparison
@@ -523,7 +527,7 @@ with tab3:
     st.pyplot(fig_mt)
     
     if sep_m >= delta_R_nominal:
-        st.success(f"✅ **Resolved:** Two space objects separated by {sep_m:.1f} m are cleanly resolved into two distinct peaks!")
+        st.info(f"Separation {sep_m:.1f} m exceeds the nominal {delta_R_nominal:.1f} m resolution. Inspect the computed profile; this comparison alone does not establish detection of two targets.")
     else:
         st.warning(f"⚠️ **Rayleigh Limit Warning:** Target separation ({sep_m:.1f} m) is smaller than nominal range resolution ({delta_R_nominal:.1f} m). Increase bandwidth $B$ to resolve them.")
 
@@ -535,7 +539,7 @@ with tab4:
     
     st.markdown(f"""
     In linear FM pulses, target radial velocity $v_r$ induces a Doppler shift $f_d = 2 v_r / \\lambda$:
-    $$\\Delta R = -\\frac{c \\cdot f_d}{2 k_r} = -\\frac{c \\cdot f_d \\cdot \\tau_p}{2 B}$$
+    $$\\Delta R = -\\frac{{c \\cdot f_d}}{{2 k_r}} = -\\frac{{c \\cdot f_d \\cdot \\tau_p}}{{2 B}}$$
     
     At $v_r = {vr_ms:+.0f}\\text{{ m/s}}$ (Mach {vr_ms/340.0:+.2f}), Doppler shift is **$f_d = {fd_khz:+.2f}\\text{{ kHz}}$**, inducing an apparent range bias of **${coupling_m:+.2f}\\text{{ meters}}$**!
     """)
@@ -585,7 +589,7 @@ with tab4:
     plt.tight_layout()
     st.pyplot(fig_dop)
     
-    st.info(f"💡 **Chirp Diversity Solution:** Transmitting alternating Up/Down chirps allows SDSC SHAR tracking radars to cancel Doppler bias completely: $R = (R_{{up}} + R_{{down}})/2 = \\mathbf{{{r_estimated/1e3:.4f}\\text{{ km}}}}$, extracting exact velocity $\\mathbf{{{v_estimated:.1f}\\text{{ m/s}}}}$!")
+    st.info(f"💡 **Chirp Diversity Solution:** Transmitting alternating Up/Down chirps cancels Doppler bias in this ideal analytical model: $R = (R_{{up}} + R_{{down}})/2 = \\mathbf{{{r_estimated/1e3:.4f}\\text{{ km}}}}$, recovering analytical velocity $\\mathbf{{{v_estimated:.1f}\\text{{ m/s}}}}$!")
 
 # ---------------------------------------------------------
 # TAB 5: Sidelobe Suppression & Weak Target Unmasking
@@ -605,9 +609,9 @@ with tab5:
     """)
     
     with st.spinner("Comparing Rectangular vs Taylor windowing..."):
-        np.random.seed(42)
+        np.random.seed(2026)
         _, comp_rect, _ = simulate_chain(tau2, "Rectangular (Unweighted)", add_second_target=True, sep_m=weak_sep_m, rcs_ratio_db=-weak_rcs_ratio_db)
-        np.random.seed(42)
+        np.random.seed(2026)
         _, comp_taylor, _ = simulate_chain(tau2, "Taylor (nbar=4, SLL=-35 dB)", add_second_target=True, sep_m=weak_sep_m, rcs_ratio_db=-weak_rcs_ratio_db)
         
     rect_db = 10.0 * np.log10(comp_rect / np.max(comp_rect) + 1e-30)
@@ -625,8 +629,8 @@ with tab5:
     m_w = (r_axis_km >= r_w_min) & (r_axis_km <= r_w_max)
     r_w_rel = (r_axis_km[m_w] - R0_km) * 1e3
     
-    ax_w.plot(r_w_rel, rect_db[m_w], color="#f43f5e", lw=1.3, alpha=0.75, label="Rectangular Window (-13.3 dB Sidelobes — Buries Weak Target)")
-    ax_w.plot(r_w_rel, taylor_db[m_w], color="#10b981", lw=1.8, label="Taylor Window (-35 dB Sidelobes — Unmasks Weak Target!)")
+    ax_w.plot(r_w_rel, rect_db[m_w], color="#f43f5e", lw=1.3, alpha=0.75, label="Rectangular receiver response")
+    ax_w.plot(r_w_rel, taylor_db[m_w], color="#10b981", lw=1.8, label="Taylor receiver response (design SLL 35 dB)")
     ax_w.axvline(0, color="#ec4899", linestyle=":", lw=1.5, label="Strong Rocket Body (0.0 m)")
     ax_w.axvline(weak_sep_m, color="#38bdf8", linestyle=":", lw=1.5, label=f"Weak Satellite (+{weak_sep_m:.0f} m, -{weak_rcs_ratio_db:.0f} dB)")
     
@@ -640,7 +644,7 @@ with tab5:
     plt.tight_layout()
     st.pyplot(fig_w)
     
-    st.success(f"✨ **Taylor Windowing Advantage:** The rectangular window's $-13.3\\text{{ dB}}$ sidelobe swamps the weak satellite peak. Taylor weighting suppresses sidelobes to $-35.0\\text{{ dB}}$ with only $0.9\\text{{ dB}}$ mismatch loss, making the faint target clearly visible and detectable!")
+    st.info("Taylor weighting trades SNR and mainlobe width for lower sidelobes. Target visibility depends on separation, contrast, noise and the selected parameters; inspect the computed responses.")
 
 # ---------------------------------------------------------
 # Footer & Project Metadata

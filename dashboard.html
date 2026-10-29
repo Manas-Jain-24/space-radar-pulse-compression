@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDSC SHAR Space Radar Pulse Compression Simulation | Utkrishta 2026</title>
+    <title>Synthetic S-band Radar Pulse Compression Simulation | Utkrishta 2026</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -355,7 +355,7 @@
         <div class="brand-header">
             <div class="brand-logo">📡</div>
             <div>
-                <div class="brand-title">SDSC SHAR Space Radar</div>
+                <div class="brand-title">Synthetic S-band Radar</div>
                 <div class="brand-sub">ISRO Track 1 Simulation</div>
             </div>
         </div>
@@ -505,10 +505,11 @@
                 </div>
             </div>
 
-            <canvas id="radarCanvas" width="960" height="380"></canvas>
+            <p style="color:#fbbf24">Analytical calculator with illustrative curves. Numerical validation, AWGN and measured CFAR results are provided by the Python scripts.</p>
+                <canvas id="radarCanvas" width="960" height="380"></canvas>
 
             <div class="info-callout" id="calloutText">
-                💡 <b>Verification Proof:</b> At range <b>200.0 km</b>, the 100 µs pulse delivers exactly <b>+10.00 dB</b> greater peak compressed power than the 10 µs pulse, while maintaining the exact identical Rayleigh <b>37.5 m</b> resolution cell.
+                💡 <b>Analytical prediction:</b> At range <b>200.0 km</b>, the 100 µs pulse delivers exactly <b>+10.00 dB</b> greater peak compressed power than the 10 µs pulse, while maintaining the exact identical Rayleigh <b>37.5 m</b> resolution cell.
             </div>
         </div>
     </main>
@@ -647,22 +648,22 @@
             if (activeTab === 0) {
                 // TAB 1: SNR Boost Comparison
                 document.getElementById("plotTitle").innerText = `Pulse Compression Output (τ₁ = ${data.tau1_us} µs vs τ₂ = ${data.tau2_us} µs)`;
-                document.getElementById("plotSubtitle").innerText = `Measured SNR boost: +${data.snr_boost.toFixed(2)} dB | Range Resolution: ${data.delta_R.toFixed(1)} m`;
-                document.getElementById("calloutText").innerHTML = `💡 <b>Quantitative Result:</b> The <b>${data.tau2_us} µs</b> pulse achieves <b>+${data.snr_boost.toFixed(2)} dB</b> greater peak output than the <b>${data.tau1_us} µs</b> pulse, while maintaining the exact identical Rayleigh <b>${data.delta_R.toFixed(1)} m</b> resolution.`;
+                document.getElementById("plotSubtitle").innerText = `Theoretical SNR boost: +${data.snr_boost.toFixed(2)} dB | Range Resolution: ${data.delta_R.toFixed(1)} m`;
+                document.getElementById("calloutText").innerHTML = `💡 <b>Analytical prediction:</b> The <b>${data.tau2_us} µs</b> pulse achieves <b>+${data.snr_boost.toFixed(2)} dB</b> greater peak output than the <b>${data.tau1_us} µs</b> pulse, while maintaining the exact identical Rayleigh <b>${data.delta_R.toFixed(1)} m</b> resolution.`;
 
                 // Draw Pulse 1 (Cyan)
-                drawSincTrace(ctx, w, h, 0.5, 0.55, 0.035, "#38bdf8", "τ₁ = " + data.tau1_us + " µs (17.4 dB)");
+                drawSincTrace(ctx, w, h, 0.5, 0.55, (0.035 * 4 / data.B_mhz), "#38bdf8", "τ₁ = " + data.tau1_us + " µs (theoretical)");
                 // Draw Pulse 2 (Pink - 10 dB higher peak)
-                drawSincTrace(ctx, w, h, 0.5, 0.88, 0.035, "#ec4899", "τ₂ = " + data.tau2_us + " µs (27.4 dB, +10 dB boost)");
+                drawSincTrace(ctx, w, h, 0.5, 0.88, (0.035 * 4 / data.B_mhz), "#ec4899", "τ₂ = " + data.tau2_us + " µs (theoretical)");
 
             } else if (activeTab === 1) {
                 // TAB 2: CA-CFAR
                 document.getElementById("plotTitle").innerText = `Adaptive CA-CFAR Target Detection at R = ${data.R_km.toFixed(1)} km`;
-                document.getElementById("plotSubtitle").innerText = `Pfa = 10⁻⁶ | Guard Cells = 4 | Training Reference Cells = 32 | Detection Margin: +17.0 dB`;
-                document.getElementById("calloutText").innerHTML = `🛡️ <b>CA-CFAR Target Margin:</b> The 100 µs target echo soars <b>+16.99 dB</b> above the adaptive noise threshold, guaranteeing robust detection with zero false alarms.`;
+                document.getElementById("plotSubtitle").innerText = `Illustrative threshold only — run Python for measured CFAR margins`;
+                document.getElementById("calloutText").innerHTML = `🛡️ <b>CA-CFAR Target Margin:</b> This schematic shows the idea of an adaptive threshold. It does not compute CFAR or predict false-alarm probability.`;
 
                 // Signal trace
-                drawSincTrace(ctx, w, h, 0.5, 0.88, 0.035, "#38bdf8", "Target Echo (100 µs)");
+                drawSincTrace(ctx, w, h, 0.5, 0.88, (0.035 * 4 / data.B_mhz), "#38bdf8", "Target Echo (100 µs)");
                 // CFAR Threshold line
                 ctx.beginPath();
                 ctx.strokeStyle = "#f43f5e";
@@ -685,12 +686,12 @@
             } else if (activeTab === 2) {
                 // TAB 3: Multi-Target Resolution (50m Separation)
                 document.getElementById("plotTitle").innerText = `Multi-Target Discrimination (50 m Separation at 200 km)`;
-                document.getElementById("plotSubtitle").innerText = `Rayleigh limit ΔR = ${data.delta_R.toFixed(1)} m. Two space objects cleanly resolved!`;
-                document.getElementById("calloutText").innerHTML = `🔭 <b>Rayleigh Criterion:</b> Because 50 m > ΔR (37.5 m), two space debris objects separated by 50 meters are cleanly separated into two distinct Rayleigh peaks!`;
+                document.getElementById("plotSubtitle").innerText = `Rayleigh limit ΔR = ${data.delta_R.toFixed(1)} m. Analytical illustration; resolution depends on bandwidth and target contrast.`;
+                document.getElementById("calloutText").innerHTML = `🔭 <b>Rayleigh Criterion:</b> The separation is 50 m; the nominal resolution for the selected bandwidth is ${data.delta_R.toFixed(1)} m. These are illustrative individual target responses, not a measured detection result.`;
 
                 // Two target sincs separated by 50m
-                drawSincTrace(ctx, w, h, 0.46, 0.85, 0.035, "#38bdf8", "Target 1 (200.000 km)");
-                drawSincTrace(ctx, w, h, 0.54, 0.85, 0.035, "#10b981", "Target 2 (200.050 km)");
+                drawSincTrace(ctx, w, h, 0.46, 0.85, (0.035 * 4 / data.B_mhz), "#38bdf8", "Target 1 (200.000 km)");
+                drawSincTrace(ctx, w, h, 0.54, 0.85, (0.035 * 4 / data.B_mhz), "#10b981", "Target 2 (200.050 km)");
 
             } else if (activeTab === 3) {
                 // TAB 4: Doppler Coupling
@@ -699,8 +700,8 @@
                 document.getElementById("calloutText").innerHTML = `🚀 <b>Decoupling Solution:</b> Up-Chirp shifts by <b>${data.doppler_bias_m.toFixed(1)} m</b>, Down-Chirp shifts by <b>${(-data.doppler_bias_m).toFixed(1)} m</b>. Averaging recovers exact true range <b>${data.R_km.toFixed(3)} km</b> and exact velocity <b>${data.vr.toFixed(0)} m/s</b>!`;
 
                 const shiftFraction = Math.max(-0.25, Math.min(0.25, data.doppler_bias_m / 600));
-                drawSincTrace(ctx, w, h, 0.5 + shiftFraction, 0.82, 0.035, "#38bdf8", "Up-Chirp Peak (" + data.doppler_bias_m.toFixed(1) + " m)");
-                drawSincTrace(ctx, w, h, 0.5 - shiftFraction, 0.82, 0.035, "#f43f5e", "Down-Chirp Peak (" + (-data.doppler_bias_m).toFixed(1) + " m)");
+                drawSincTrace(ctx, w, h, 0.5 + shiftFraction, 0.82, (0.035 * 4 / data.B_mhz), "#38bdf8", "Up-Chirp Peak (" + data.doppler_bias_m.toFixed(1) + " m)");
+                drawSincTrace(ctx, w, h, 0.5 - shiftFraction, 0.82, (0.035 * 4 / data.B_mhz), "#f43f5e", "Down-Chirp Peak (" + (-data.doppler_bias_m).toFixed(1) + " m)");
 
                 // True target marker
                 ctx.beginPath();
@@ -715,12 +716,12 @@
                 // TAB 5: Taylor Sidelobes
                 document.getElementById("plotTitle").innerText = `Taylor Windowing Sidelobe Suppression & Weak Target Unmasking`;
                 document.getElementById("plotSubtitle").innerText = `Strong Rocket (0 m) vs Weak Satellite (+80 m, -20 dB). Taylor unmasks weak target!`;
-                document.getElementById("calloutText").innerHTML = `🪟 <b>Sidelobe Attenuation:</b> Rectangular sinc sidelobes (-13.3 dB) swamp the weak satellite. Taylor weighting suppresses sidelobes to <b>-35.0 dB</b>, clearly unmasking the satellite!`;
+                document.getElementById("calloutText").innerHTML = `🪟 <b>Sidelobe Attenuation:</b> Rectangular sinc sidelobes (-13.3 dB) swamp the weak satellite. The schematic illustrates sidelobe tapering. Actual suppression and target visibility must be measured from the Python waveform experiment.`;
 
                 // Rectangular trace (high sidelobes burying weak target)
-                drawSincTrace(ctx, w, h, 0.45, 0.88, 0.035, "#f43f5e", "Rectangular (-13.3 dB Sidelobes, swamps target)");
+                drawSincTrace(ctx, w, h, 0.45, 0.88, (0.035 * 4 / data.B_mhz), "#f43f5e", "Rectangular (-13.3 dB Sidelobes, swamps target)");
                 // Taylor trace (low sidelobes, unmasks weak peak at 0.56)
-                drawTaylorTrace(ctx, w, h, 0.45, 0.86, 0.56, 0.45, "#10b981", "Taylor Window (-35 dB SLL, unmasks target)");
+                drawTaylorTrace(ctx, w, h, 0.45, 0.86, 0.56, 0.45, "#10b981", "Illustrative tapered response");
             }
         }
 
@@ -733,7 +734,7 @@
                 const normX = (x / w - xCenterNorm) / widthNorm;
                 const sincVal = normX === 0 ? 1 : Math.sin(Math.PI * normX) / (Math.PI * normX);
                 const power = Math.pow(sincVal, 2);
-                const noise = (Math.random() - 0.5) * 0.02;
+                const noise = 0; // Illustration: no sampled receiver noise is simulated here.
                 const y = h - (power * peakHeightNorm * (h - 60) + noise * h + 30);
 
                 if (x === 0) ctx.moveTo(x, y);

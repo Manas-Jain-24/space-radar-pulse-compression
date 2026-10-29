@@ -13,8 +13,11 @@ This module implements a complete, end-to-end LFM radar simulation chain:
 
 from pathlib import Path
 import argparse
+import hashlib
+import json
 import numpy as np
 import matplotlib.pyplot as plt
+import artifact_io
 from scipy.fft import fft, ifft, fftshift, fftfreq, next_fast_len
 from scipy.optimize import brentq
 from scipy.stats import ncx2
@@ -40,7 +43,7 @@ TAU_DELAY = 2 * R_TARGET / C     # Round-trip delay (s) = 1.3333 ms
 RCS = 1.0                        # Radar cross section (m^2) = 1 m^2 (0 dBsm)
 VR_TARGET = 0.0                  # Radial velocity (m/s)
 
-# Radar link parameters (SDSC SHAR tracking radar profile)
+# Assumed S-band radar link parameters; not verified SDSC SHAR specifications.
 PT = 250.0e3                     # Transmit peak power (W) = 250 kW
 G_TX_DB = 40.0                   # Transmit antenna gain (dB)
 G_RX_DB = 40.0                   # Receive antenna gain (dB)
@@ -214,6 +217,35 @@ def marcum_q1(a, b):
     return ncx2.sf(b**2, df=2, nc=a**2)
 
 
+def monte_carlo_snr(n_trials=200):
+    """Exercise the production echo/filter path using paired noise realizations.
+
+    The peak statistic uses the known output noise variance, as in the main run.
+    The interval describes the mean gain, not detection probability.
+    """
+    if n_trials < 2:
+        raise ValueError("At least two trials are required")
+    link = compute_radar_link(PT, G_TX, G_RX, LAMBDA_C, RCS, R_TARGET, LOSS, NF, B, FS)
+    mask = np.abs(np.arange(N_PRI) * SAMPLE_SPACING - R_TARGET) <= 500
+    boosts = []
+    for seed in range(n_trials):
+        rng = np.random.default_rng(seed)
+        noise = None
+        peaks = []
+        for tau in (TAU_1, TAU_2):
+            tx, echo, ns, _, pn = simulate_rx_echo(tau, B, FS, link["Pr"], R_TARGET, N_PRI, rng)
+            if noise is None:
+                noise = ns
+            power = np.abs(matched_filter(echo + noise, tx)) ** 2
+            peaks.append(10 * np.log10(np.max(power[mask]) / (pn * np.sum(np.abs(tx) ** 2))))
+        boosts.append(peaks[1] - peaks[0])
+    mean = float(np.mean(boosts))
+    std = float(np.std(boosts, ddof=1))
+    half_ci = 1.96 * std / np.sqrt(n_trials)
+    return {"n_trials": n_trials, "mean_boost_db": mean, "std_boost_db": std,
+            "mean_ci95_db": [float(mean - half_ci), float(mean + half_ci)]}
+
+
 # ==============================================================================
 # 3. MAIN SIMULATION & VISUALIZATION PIPELINE
 # ==============================================================================
@@ -316,7 +348,7 @@ def run_simulation(output_dir="figures/track1", show=False):
     ax2.grid(True, alpha=0.3, ls="--")
     ax2.legend(loc="upper right", framealpha=0.9, fontsize=10)
     fig1.tight_layout()
-    fig1.savefig(out_path / "fig1_prt_pulse_train.png", dpi=300)
+    artifact_io.save_figure(fig1, out_path / "fig1_prt_pulse_train.png", dpi=300)
     print(f"\n[Generated] {out_path / 'fig1_prt_pulse_train.png'}")
 
     # Plot 2: Time-Domain Waveforms & Frequency Spectra
@@ -366,7 +398,7 @@ def run_simulation(output_dir="figures/track1", show=False):
 
     fig2.suptitle("LFM Chirp Generation: Time Waveforms & Baseband Spectra (Bandwidth = 4.0 MHz)", fontsize=13, fontweight="bold")
     fig2.tight_layout()
-    fig2.savefig(out_path / "fig2_lfm_waveforms_and_spectra.png", dpi=300)
+    artifact_io.save_figure(fig2, out_path / "fig2_lfm_waveforms_and_spectra.png", dpi=300)
     print(f"[Generated] {out_path / 'fig2_lfm_waveforms_and_spectra.png'}")
 
     # --------------------------------------------------------------------------
@@ -401,7 +433,7 @@ def run_simulation(output_dir="figures/track1", show=False):
 
     fig3.suptitle("Target Echo at 200 km: Radar Range Equation & Receiver Noise Floor", fontsize=13, fontweight="bold")
     fig3.tight_layout()
-    fig3.savefig(out_path / "fig3_target_echo_at_200km.png", dpi=300)
+    artifact_io.save_figure(fig3, out_path / "fig3_target_echo_at_200km.png", dpi=300)
     print(f"[Generated] {out_path / 'fig3_target_echo_at_200km.png'}")
 
     # --------------------------------------------------------------------------
@@ -451,7 +483,9 @@ def run_simulation(output_dir="figures/track1", show=False):
     axes4[0].plot(range_axis_m / 1e3, p_mf1_snr_db, color="#1f77b4", lw=0.7, alpha=0.8, label=r"$\tau_1 = 10\ \mu\mathrm{s}$ (MF Output)")
     axes4[0].plot(range_axis_m / 1e3, p_mf2_snr_db, color="#d62728", lw=0.7, alpha=0.8, label=r"$\tau_2 = 100\ \mu\mathrm{s}$ (MF Output)")
     axes4[0].axvline(R_TARGET / 1e3, color="green", ls="--", lw=1.2, label="Target (200 km)")
-    axes4[0].axhline(snr_req_db, color="darkorange", ls=":", lw=1.5, label=f"Detection Threshold ({snr_req_db:.1f} dB for Pd=0.9)")
+    threshold_stat_db = 10 * np.log10(-np.log(PFA))
+    axes4[0].axhline(threshold_stat_db, color="darkorange", ls=":", lw=1.5,
+                    label=f"Known-noise power threshold ({threshold_stat_db:.1f} dB; Pfa={PFA:g})")
     axes4[0].set_title("Full Unambiguous Range Profile (0 to 300 km)", fontsize=11, fontweight="bold")
     axes4[0].set_xlabel("Range (km)", fontsize=10)
     axes4[0].set_ylabel("Output SNR (dB)", fontsize=10)
@@ -489,7 +523,7 @@ def run_simulation(output_dir="figures/track1", show=False):
 
     fig4.suptitle("Pulse Compression Verification: +10 dB SNR Enhancement with Identical Range Resolution", fontsize=13, fontweight="bold")
     fig4.tight_layout()
-    fig4.savefig(out_path / "fig4_pulse_compression_snr_boost.png", dpi=300)
+    artifact_io.save_figure(fig4, out_path / "fig4_pulse_compression_snr_boost.png", dpi=300)
     print(f"[Generated] {out_path / 'fig4_pulse_compression_snr_boost.png'}")
 
     # --------------------------------------------------------------------------
@@ -519,7 +553,7 @@ def run_simulation(output_dir="figures/track1", show=False):
     ax5b.plot(r_cfar_km, p_mf2_snr_db[zoom_cfar_mask], color="#d62728", lw=1.2, label=r"Power Profile ($\tau_2 = 100\ \mu\mathrm{s}$)")
     ax5b.plot(r_cfar_km, thresh_2_db[zoom_cfar_mask], color="orange", ls="--", lw=1.5, label=rf"CA-CFAR Threshold ($P_{{fa}}=10^{{-6}}$, Margin = {cfar_margin_2:.2f} dB)")
     ax5b.axvline(200.0, color="green", ls=":", lw=1.0)
-    ax5b.set_title(r"Adaptive CA-CFAR: $\tau_2 = 100\ \mu\mathrm{s}$ (Robust +10 dB Detection Margin Boost)", fontsize=11, fontweight="bold")
+    ax5b.set_title(r"Adaptive CA-CFAR: $\tau_2 = 100\ \mu\mathrm{s}$ (Measured Local Threshold)", fontsize=11, fontweight="bold")
     ax5b.set_xlabel("Range (km)", fontsize=10)
     ax5b.set_ylabel("Power / SNR (dB)", fontsize=10)
     ax5b.grid(True, alpha=0.3)
@@ -527,7 +561,7 @@ def run_simulation(output_dir="figures/track1", show=False):
 
     fig5.suptitle("Adaptive CA-CFAR Detection: Target Detection Margin at Range = 200 km", fontsize=13, fontweight="bold")
     fig5.tight_layout()
-    fig5.savefig(out_path / "fig5_detection_and_cfar_margin.png", dpi=300)
+    artifact_io.save_figure(fig5, out_path / "fig5_detection_and_cfar_margin.png", dpi=300)
     print(f"[Generated] {out_path / 'fig5_detection_and_cfar_margin.png'}")
 
     print("\n" + "=" * 80)
@@ -535,7 +569,7 @@ def run_simulation(output_dir="figures/track1", show=False):
     print(f"All 5 publication-ready plots saved to: {out_path.resolve()}")
     print("=" * 80)
 
-    return {
+    results = {
         "snr_meas_1_db": snr_meas_1_db,
         "snr_meas_2_db": snr_meas_2_db,
         "delta_snr_meas_db": delta_snr_meas_db,
@@ -546,8 +580,26 @@ def run_simulation(output_dir="figures/track1", show=False):
         "margin_1_db": margin_1_db,
         "margin_2_db": margin_2_db,
         "cfar_margin_1": cfar_margin_1,
-        "cfar_margin_2": cfar_margin_2
+        "cfar_margin_2": cfar_margin_2,
+        "snr_theory_1_db": snr_ideal_1_db,
+        "snr_theory_2_db": snr_ideal_2_db,
+        "snr_required_db": snr_req_db,
+        "nominal_resolution_m": DELTA_R,
+        "seed": 2026,
+        "cfar_reference_total": 48,
+        "cfar_guard_total": 16,
+        "monte_carlo": monte_carlo_snr(),
+        "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "assumptions": "Synthetic nonfluctuating point target; assumed S-band link parameters. CA-CFAR nominal Pfa assumes independent exponential cells; oversampled MF cells are correlated."
     }
+    with artifact_io.atomic_output(out_path / "simulation_results.json") as temporary:
+        temporary.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    print(f"[Results] {out_path / 'simulation_results.json'}")
+    if show:
+        plt.show()
+    else:
+        plt.close("all")
+    return results
 
 
 if __name__ == "__main__":

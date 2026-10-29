@@ -16,6 +16,7 @@ Packages all required submission deliverables into a clean, standalone ZIP archi
 
 import os
 import zipfile
+from report_data import atomic_output
 
 def create_submission_bundle():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +36,13 @@ def create_submission_bundle():
         
         # Core & Bonus Code
         "track1_lfm_simulation.py",
+        "radar_metrics.py",
+        "artifact_io.py",
+        "figures/track1/simulation_results.json",
+        "tests/stress_test_suite.py",
+        "tests/test_regressions.py",
+        "scripts/report_data.py",
+        "scripts/update_written_results.py",
         "track1_bonus_upgrades.py",
         "track1_radar_notebook.ipynb",
         "app.py",
@@ -73,7 +81,7 @@ def create_submission_bundle():
     total_uncompressed_bytes = 0
     included_count = 0
     
-    with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
+    with atomic_output(zip_filename) as temporary, zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
         for rel_path in files_to_include:
             full_path = os.path.join(base_dir, rel_path)
             if os.path.exists(full_path):
@@ -83,7 +91,7 @@ def create_submission_bundle():
                 print(f"  [+] Added: {rel_path:<45} ({size_bytes / 1024:.1f} KB)")
                 included_count += 1
             else:
-                print(f"  [!] WARNING: Missing file {rel_path}")
+                raise FileNotFoundError(f"Required submission file missing: {rel_path}")
                 
     zip_size_mb = os.path.getsize(zip_filename) / (1024 * 1024)
     print("=" * 75)

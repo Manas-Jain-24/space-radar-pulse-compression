@@ -14,7 +14,7 @@ Coherent Processing Interval (CPI) comprising a burst of M consecutive coherent 
 Coherent Integration Gain:
   By taking a Doppler FFT across the M pulses for every range cell, coherent integration
   concentrates target energy in a single Doppler bin:
-      Gain_CPI = 10 * log10(M)
+      Gain_CPI = 10 * log10(M) for an unwindowed, on-bin target
   For M = 32 pulses:
       Gain_CPI = 10 * log10(32) = +15.05 dB additional SNR enhancement!
   Total Processing Gain (Pulse Compression + CPI):
@@ -23,13 +23,17 @@ Coherent Integration Gain:
 Clutter Separation:
   Stationary ground/sea clutter (vr = 0 m/s) maps strictly to Doppler bin 0 (fd = 0 Hz).
   A high-speed space vehicle separates into its distinct Doppler bin, allowing zero-Doppler
-  MTI filtering to completely eradicate clutter while preserving the rocket echo!
+  Doppler processing can separate clutter, subject to aliasing and finite window leakage.
+
+This study starts from synthetic post-compression samples, not a propagated LFM burst.
+The implemented Hann window has a lower gain: (sum w)^2 / sum(w^2).
 """
 
 import os
 import numpy as np
 import scipy.signal as signal
 import matplotlib.pyplot as plt
+import artifact_io
 
 def run_upgrade3_coherent_cpi():
     print("=" * 80)
@@ -50,13 +54,13 @@ def run_upgrade3_coherent_cpi():
     dt = 1.0 / fs
     
     M_pulses = 32       # 32 pulses in CPI (Dwell time = 64 ms)
-    cpi_gain_db = 10.0 * np.log10(M_pulses)
+    cpi_gain_db = 10.0 * np.log10(M_pulses)  # Unwindowed upper bound
     
     # Target Parameters
     R0 = 200.0e3        # 200 km
     tau_d = 2.0 * R0 / c
-    vr = 12.5           # Velocity for clear Doppler display within PRF span
-    fd = 2.0 * vr / lambda_c  # 250 Hz (exact mid-band Doppler)
+    vr = 6.25           # Velocity for clear Doppler display within PRF span
+    fd = 2.0 * vr / lambda_c  # 125 Hz, on an FFT bin and strictly inside the Nyquist interval
     
     # Range window around 200 km (+/- 600 m = 128 cells)
     n_range_cells = 128
@@ -89,7 +93,7 @@ def run_upgrade3_coherent_cpi():
         slow_time_t = m * PRT
         doppler_phase = np.exp(1j * 2.0 * np.pi * fd * slow_time_t)
         # Sinc mainlobe across fast-time range cells
-        sinc_fast = np.sinc((np.arange(n_range_cells) - target_cell) * 0.4)
+        sinc_fast = np.sinc((np.arange(n_range_cells) - target_cell) * B / fs)
         data_cube[:, m] += target_amp * sinc_fast * doppler_phase
         
     # -------------------------------------------------------------
@@ -104,22 +108,27 @@ def run_upgrade3_coherent_cpi():
     rd_power = np.abs(rd_map) ** 2
     rd_power_db = 10.0 * np.log10(rd_power / np.median(rd_power) + 1e-12)
     
-    doppler_axis_hz = np.linspace(-PRF / 2.0, PRF / 2.0, M_pulses)
+    doppler_axis_hz = np.fft.fftshift(np.fft.fftfreq(M_pulses, d=PRT))
+    window_gain_db = 10 * np.log10(slow_window.sum() ** 2 / np.sum(slow_window ** 2))
+    noise_gain = np.sum(slow_window ** 2)
+    measured_doppler_hz = doppler_axis_hz[np.argmax(rd_power[target_cell])]
     velocity_axis_ms = doppler_axis_hz * lambda_c / 2.0
     
     # Single-pulse (un-integrated) vs Coherently-Integrated profile comparison
     single_pulse_power = np.abs(data_cube[:, 0]) ** 2
-    single_pulse_db = 10.0 * np.log10(single_pulse_power / np.median(single_pulse_power) + 1e-12)
+    single_pulse_db = 10.0 * np.log10(single_pulse_power / 1.0 + 1e-12)
     
     integrated_range_profile = np.max(rd_power, axis=1)
-    integrated_db = 10.0 * np.log10(integrated_range_profile / np.median(rd_power) + 1e-12)
+    integrated_db = 10.0 * np.log10(integrated_range_profile / noise_gain + 1e-12)
     
+    measured_gain_db = integrated_db[target_cell] - single_pulse_db[target_cell]
+
     # -------------------------------------------------------------
     # Plotting 2D Range-Doppler Map and Performance Cuts
     # -------------------------------------------------------------
     fig = plt.figure(figsize=(16, 10), facecolor='#080d1a')
     plt.suptitle("Coherent Processing Interval (CPI): 2D Range-Doppler Map & M=32 Pulse Integration\n"
-                 "SDSC SHAR Space Radar (Carrier = 3.0 GHz, PRF = 500 Hz, Dwell = 64 ms)",
+                 "Synthetic post-compression study (Carrier = 3.0 GHz, PRF = 500 Hz, Dwell = 64 ms)",
                  color='#f8fafc', fontsize=14, fontweight='bold', y=0.98)
     
     # Panel 1: 2D Range-Doppler Heatmap
@@ -151,13 +160,13 @@ def run_upgrade3_coherent_cpi():
     # Panel 2: Coherent Integration SNR Gain (Single Pulse vs CPI M=32)
     ax2 = fig.add_subplot(2, 2, 2, facecolor='#0b1329')
     ax2.plot(r_axis_km, single_pulse_db, color='#94a3b8', lw=1.3, alpha=0.75, label="Single Pulse Response (M=1)")
-    ax2.plot(r_axis_km, integrated_db, color='#38bdf8', lw=2.0, label=f"Coherently Integrated (M=32, +15.05 dB Boost)")
+    ax2.plot(r_axis_km, integrated_db, color='#38bdf8', lw=2.0, label=f"Hann CPI (M=32, expected gain {window_gain_db:.2f} dB)")
     ax2.axvline(200.0, color='#10b981', linestyle=':', lw=1.5, label="Target Position (200.0 km)")
     
     ax2.set_xlabel("Radar Range (km)", color='#cbd5e1', fontsize=10, fontweight='bold')
     ax2.set_ylabel("Power relative to Noise Floor (dB)", color='#cbd5e1', fontsize=10, fontweight='bold')
     ax2.set_title(f"Coherent Integration Gain Proof: M = 32 Pulses\n"
-                  f"Measured Peak Boost: +14.82 dB (Theory: +10 log10(32) = +15.05 dB)",
+                  f"Noisy peak change: {measured_gain_db:+.2f} dB; Hann expected: {window_gain_db:.2f} dB",
                   color='#f8fafc', fontsize=11, fontweight='bold')
     ax2.set_xlim(r_axis_km[0], r_axis_km[-1])
     ax2.set_ylim(-5, 38)
@@ -177,7 +186,7 @@ def run_upgrade3_coherent_cpi():
     ax3.set_xlabel("Doppler Frequency Shift (Hz)", color='#cbd5e1', fontsize=10, fontweight='bold')
     ax3.set_ylabel("Power relative to Noise (dB)", color='#cbd5e1', fontsize=10, fontweight='bold')
     ax3.set_title("Doppler Profile Cut at R = 200 km\n"
-                  "Sharp Target Peak with Hann Sidelobes (-32 dB) and Zero Clutter Leakage",
+                  "On-bin target with Hann window; finite clutter leakage",
                   color='#f8fafc', fontsize=11, fontweight='bold')
     ax3.set_xlim(-PRF / 2.0, PRF / 2.0)
     ax3.set_ylim(-5, 38)
@@ -189,10 +198,12 @@ def run_upgrade3_coherent_cpi():
         
     plt.tight_layout()
     out_path = os.path.join(out_dir, "fig11_coherent_range_doppler_map.png")
-    plt.savefig(out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
+    artifact_io.save_figure(plt.gcf(), out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
     plt.close()
     print(f"[Generated] {out_path}")
-    print("Upgrade 3 Coherent CPI analysis completed successfully!")
+    print(f"Hann expected gain: {window_gain_db:.2f} dB; noisy peak change: {measured_gain_db:.2f} dB")
+    return {"target_doppler_hz": float(fd), "measured_doppler_hz": float(measured_doppler_hz),
+            "window_gain_db": float(window_gain_db), "measured_gain_db": float(measured_gain_db)}
 
 if __name__ == "__main__":
     run_upgrade3_coherent_cpi()

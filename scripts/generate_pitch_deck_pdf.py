@@ -1,6 +1,7 @@
 """Generate 5-Slide Pitch Deck PDF in 16:9 widescreen format using ReportLab."""
 
 from pathlib import Path
+from report_data import result_text, atomic_output
 from reportlab.lib.pagesizes import landscape
 from reportlab.lib import colors
 from reportlab.platypus import (
@@ -180,7 +181,7 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
         Paragraph("• <b>The LFM Solution:</b> Modulating carrier frequency across B = 4 MHz achieves <b>ΔR = c/(2B) = 37.5 m</b>, completely invariant to pulse duration!", body_style)
     ]
     right_p2 = [
-        Paragraph("SDSC SHAR Radar Link Parameters", ParagraphStyle('CP2', parent=card_title, textColor=CYAN)),
+        Paragraph("Assumed S-band Radar Parameters", ParagraphStyle('CP2', parent=card_title, textColor=CYAN)),
         Paragraph("• <b>Carrier Frequency (f_c):</b> 3.0 GHz (S-Band, λ = 0.1 m)", body_style),
         Paragraph("• <b>Pulse Repetition Time (PRT):</b> 2.0 ms (PRF = 500 Hz, R_unamb = 300 km)", body_style),
         Paragraph("• <b>Chirp Sweep Bandwidth (B):</b> 4.0 MHz (Nominal ΔR = 37.5 m)", body_style),
@@ -250,13 +251,13 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
          Paragraph("<b>Gain / Ratio</b>", table_cell_bold)],
         [Paragraph("Time-Bandwidth (TB)", table_cell), Paragraph("40 (16.0 dB)", table_cell), Paragraph("400 (26.0 dB)", table_cell), Paragraph("<b>+10.0 dB</b>", table_cell_bold)],
         [Paragraph("Radiated Energy", table_cell), Paragraph("2.50 J", table_cell), Paragraph("25.00 J", table_cell), Paragraph("<b>+10.0 dB</b>", table_cell_bold)],
-        [Paragraph("Theoretical MF SNR", table_cell), Paragraph("17.44 dB", table_cell), Paragraph("27.44 dB", table_cell), Paragraph("<b>+10.00 dB</b>", table_cell_bold)],
-        [Paragraph("Simulated Peak SNR", table_cell), Paragraph("17.13 dB", table_cell), Paragraph("27.31 dB", table_cell), Paragraph("<b>+10.18 dB (Valid!)</b>", table_cell_bold)],
+        [Paragraph("Theoretical MF SNR", table_cell), Paragraph(result_text('{{THEORY1}} dB'), table_cell), Paragraph(result_text('{{THEORY2}} dB'), table_cell), Paragraph("<b>+10.00 dB</b>", table_cell_bold)],
+        [Paragraph("Simulated Peak SNR", table_cell), Paragraph(result_text('{{SNR1}} dB'), table_cell), Paragraph(result_text('{{SNR2}} dB'), table_cell), Paragraph(result_text('<b>+{{BOOST}} dB (Valid!)</b>'), table_cell_bold)],
         [Paragraph("Nominal Resolution", table_cell), Paragraph("37.50 m", table_cell), Paragraph("37.50 m", table_cell), Paragraph("<b>1.00x (Identical)</b>", table_cell_bold)],
-        [Paragraph("Measured -3dB Width", table_cell), Paragraph("35.36 m", table_cell), Paragraph("34.17 m", table_cell), Paragraph("<b>0.97x (Identical)</b>", table_cell_bold)],
-        [Paragraph("Required SNR (Pd=0.9)", table_cell), Paragraph("13.18 dB", table_cell), Paragraph("13.18 dB", table_cell), Paragraph("Marcum Q baseline", table_cell)],
-        [Paragraph("Theoretical Link Margin", table_cell), Paragraph("+4.25 dB (Marginal)", table_cell), Paragraph("+14.25 dB (Robust)", table_cell), Paragraph("<b>+10.00 dB Boost</b>", table_cell_bold)],
-        [Paragraph("CA-CFAR Target Margin", table_cell), Paragraph("+6.81 dB", table_cell), Paragraph("+16.99 dB", table_cell), Paragraph("<b>+10.18 dB Boost</b>", table_cell_bold)]
+        [Paragraph("Measured -3dB Width", table_cell), Paragraph(result_text('{{WIDTH1}} m'), table_cell), Paragraph(result_text('{{WIDTH2}} m'), table_cell), Paragraph("<b>Similar widths</b>", table_cell_bold)],
+        [Paragraph("Required SNR (Pd=0.9)", table_cell), Paragraph(result_text('{{REQUIRED}} dB'), table_cell), Paragraph(result_text('{{REQUIRED}} dB'), table_cell), Paragraph("Marcum Q baseline", table_cell)],
+        [Paragraph("Theoretical Link Margin", table_cell), Paragraph(result_text('+{{MARGIN1}} dB (Marginal)'), table_cell), Paragraph(result_text('+{{MARGIN2}} dB (Robust)'), table_cell), Paragraph("<b>+10.00 dB Boost</b>", table_cell_bold)],
+        [Paragraph("CA-CFAR Target Margin", table_cell), Paragraph(result_text('+{{CFAR1}} dB'), table_cell), Paragraph(result_text('+{{CFAR2}} dB'), table_cell), Paragraph(result_text('<b>+{{CFAR_DELTA}} dB Boost</b>'), table_cell_bold)]
     ]
     t4 = Table(rows4, colWidths=[150, 95, 95, 105])
     t4.setStyle(TableStyle([
@@ -287,9 +288,9 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
 
     left_p5 = [
         Paragraph("Operational Insights & Bonus Experiments", card_title),
-        Paragraph("• <b>Core Proof Verified:</b> Matched-filter SNR increases by +10.18 dB (theory: +10.00 dB) while range resolution remains invariant at ~35 m for both 10 μs and 100 μs chirps.", body_style),
-        Paragraph("• <b>Mission-Critical Link Margin:</b> At 200 km, the 100 μs pulse delivers +14.25 dB link margin and +16.99 dB CFAR margin, preventing target loss during rocket staging.", body_style),
-        Paragraph("• <b>Bonus Exp 1 (Multi-Target at 200 km):</b> Two targets separated by 50 m merge into a 15 km blob with unmodulated pulses, but are cleanly separated into 2 distinct peaks with LFM compression.", body_style),
+        Paragraph(result_text('• <b>Core Proof Verified:</b> Matched-filter SNR increases by +{{BOOST}} dB (theory: +10.00 dB) while range resolution remains invariant at ~35 m for both 10 μs and 100 μs chirps.'), body_style),
+        Paragraph(result_text('• <b>Validation:</b> 200 production trials: mean {{MC_MEAN}} dB; 95% mean CI [{{MC_LOW}}, {{MC_HIGH}}] dB. Assumed link parameters; correlated MF cells limit nominal CFAR Pfa calibration.'), body_style),
+        Paragraph("• <b>Bonus Exp 1 (Multi-Target at 200 km):</b> The 50 m pair yields one local peak in this coherent unequal-target realization. Nominal c/(2B) resolution alone does not guarantee separation; phase, contrast and noise matter.", body_style),
         Paragraph("• <b>Bonus Exp 2 (Mach 5 Doppler Coupling):</b> A 1500 m/s rocket induces -112.5 m range bias. We implemented Chirp Diversity (Up/Down chirp pairs), canceling the bias to -3 m and extracting exact velocity (1500 m/s)!", body_style)
     ]
 
@@ -310,7 +311,9 @@ def build_pdf_deck(filename="PITCH_DECK.pdf"):
     ]))
     story.append(t5)
 
-    doc.build(story, canvasmaker=SlideDeckCanvas)
+    with atomic_output(doc.filename) as temporary:
+        doc.filename = str(temporary)
+        doc.build(story, canvasmaker=SlideDeckCanvas)
     print(f"Successfully generated 5-Slide Pitch Deck PDF: {pdf_path.resolve()}")
 
 if __name__ == "__main__":

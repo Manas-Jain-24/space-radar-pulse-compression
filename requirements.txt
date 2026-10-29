@@ -5,3 +5,7 @@ matplotlib>=3.8,<4
 # Deliverable Generators (Technical Note PDF & Pitch Deck PPTX)
 reportlab>=4.0
 python-pptx>=1.0.0
+
+# PDF validation and optional interactive application
+pypdf>=5,<7
+streamlit>=1.40,<2

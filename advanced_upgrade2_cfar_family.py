@@ -22,7 +22,7 @@ In real SDSC SHAR space launch tracking, two major non-homogeneous environments 
 2. Clutter Edges (Ground/Sea Clutter or Ionospheric Transition):
    When the antenna beam crosses a sharp clutter step (+15 dB to +20 dB):
    - CA-CFAR: Sets an intermediate threshold that is too low inside the clutter region, causing
-     a catastrophic spike in False Alarm Rate (Pfa jumps from 10^-6 to 10^-2!).
+     a catastrophic spike in False Alarm Rate (Pfa can increase; its value must be measured.).
    - GO-CFAR (Greatest-Of): Computes leading and lagging averages and selects the MAXIMUM:
          P_hat_GO = max(P_lead, P_lag)
      It immediately adopts the clutter level, maintaining tight false alarm regulation.
@@ -36,6 +36,42 @@ import os
 import numpy as np
 import scipy.signal as signal
 import matplotlib.pyplot as plt
+import artifact_io
+from functools import lru_cache
+from scipy.optimize import brentq
+from scipy.special import gammaln
+
+
+@lru_cache(maxsize=128)
+def threshold_factor(method, n_train, pfa, rank=None):
+    """Exact calibration for independent exponential power cells (unit mean).
+
+    GO/SO use the Laplace transform of the max/min of two gamma means;
+    OS uses the Laplace transform of the kth exponential order statistic.
+    Correlated matched-filter cells require separate empirical validation.
+    """
+    if n_train < 1 or not 0 < pfa < 1:
+        raise ValueError("Require positive training count and 0 < pfa < 1")
+    n = n_train
+    if method == "OS":
+        total = 2 * n
+        if rank is None or not 1 <= rank <= total:
+            raise ValueError("OS rank must be between 1 and the reference count")
+        rates = np.arange(total - rank + 1, total + 1, dtype=float)
+        def probability(alpha):
+            return np.exp(-np.log1p(alpha / rates).sum())
+    elif method in ("GO", "SO"):
+        j = np.arange(n)
+        log_coeff = gammaln(n + j) - gammaln(n) - gammaln(j + 1)
+        def probability(alpha):
+            smallest = 2 * np.exp(log_coeff - (n + j) * np.log(2 + alpha / n)).sum()
+            return smallest if method == "SO" else 2 * (1 + alpha / n) ** (-n) - smallest
+    else:
+        raise ValueError("Method must be GO, SO or OS")
+    upper = 1.0
+    while probability(upper) > pfa:
+        upper *= 2
+    return brentq(lambda alpha: probability(alpha) - pfa, 0, upper)
 
 def compute_ca_cfar(power_signal, n_guard, n_train, pfa):
     """Standard Cell-Averaging CFAR"""
@@ -52,8 +88,7 @@ def compute_ca_cfar(power_signal, n_guard, n_train, pfa):
 def compute_go_cfar(power_signal, n_guard, n_train, pfa):
     """Greatest-Of CFAR (Clutter Edge Specialist)"""
     N_half = n_train
-    # Approximate scaling factor for GO-CFAR
-    alpha = N_half * (pfa ** (-1.0 / N_half) - 1.0) * 0.95
+    alpha = threshold_factor("GO", N_half, pfa)
     
     lead_kernel = np.zeros(2 * (n_train + n_guard) + 1)
     lead_kernel[:n_train] = 1.0 / n_train
@@ -70,8 +105,7 @@ def compute_go_cfar(power_signal, n_guard, n_train, pfa):
 def compute_so_cfar(power_signal, n_guard, n_train, pfa):
     """Smallest-Of CFAR (Multi-Target Masking Specialist)"""
     N_half = n_train
-    # SO requires slightly higher scaling factor to keep Pfa nominal in noise
-    alpha = N_half * (pfa ** (-1.0 / N_half) - 1.0) * 1.35
+    alpha = threshold_factor("SO", N_half, pfa)
     
     lead_kernel = np.zeros(2 * (n_train + n_guard) + 1)
     lead_kernel[:n_train] = 1.0 / n_train
@@ -89,8 +123,7 @@ def compute_os_cfar(power_signal, n_guard, n_train, pfa, k_rank_ratio=0.75):
     """Ordered-Statistic CFAR"""
     N_ref = 2 * n_train
     k_idx = int(round(k_rank_ratio * N_ref)) - 1
-    # OS-CFAR scaling constant (approximate for exponential noise)
-    alpha = np.log(1.0 / pfa) / (N_ref - k_idx)
+    alpha = threshold_factor("OS", n_train, pfa, k_idx + 1)
     
     L = len(power_signal)
     threshold = np.zeros(L)
@@ -219,7 +252,7 @@ def run_upgrade2_cfar():
     ax2.set_xlabel("Radar Range (km)", color='#cbd5e1', fontsize=10, fontweight='bold')
     ax2.set_ylabel("Power (dB)", color='#cbd5e1', fontsize=10, fontweight='bold')
     ax2.set_title("Scenario B: Clutter Boundary Transition (+15 dB Clutter Edge)\n"
-                  "CA-CFAR underestimates noise at edge -> massive false alarms. GO-CFAR selects maximum, regulating Pfa perfectly!",
+                  "CA-CFAR underestimates noise at edge -> massive false alarms. GO-CFAR selects maximum, using the calibrated GO threshold (clutter-edge Pfa must be measured)",
                   color='#f8fafc', fontsize=10, fontweight='bold')
     ax2.set_xlim(r_km[180], r_km[320])
     ax2.set_ylim(-5, 35)
@@ -227,7 +260,7 @@ def run_upgrade2_cfar():
     
     plt.tight_layout()
     out_path = os.path.join(out_dir, "fig10_cfar_family_comparison.png")
-    plt.savefig(out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
+    artifact_io.save_figure(plt.gcf(), out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
     plt.close()
     print(f"[Generated] {out_path}")
     print("Upgrade 2 CFAR Family comparison completed successfully!")

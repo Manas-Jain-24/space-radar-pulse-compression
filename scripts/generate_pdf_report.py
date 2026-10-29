@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from report_data import result_text, atomic_output
 import matplotlib.pyplot as plt
 
 from reportlab.lib.pagesizes import letter
@@ -328,14 +329,14 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         [Paragraph("Radiated Pulse Energy (<i>P<sub>t</sub></i> = 250 kW)", table_cell), Paragraph("2.50 J", table_cell), Paragraph("25.00 J", table_cell), Paragraph("+10.0 dB", table_cell)],
         [Paragraph("Chirp Sweep Slope (<i>k<sub>r</sub></i> = <i>B</i> / <i>τ<sub>p</sub></i>)", table_cell), Paragraph("4.00 × 10<sup>11</sup> Hz/s", table_cell), Paragraph("4.00 × 10<sup>10</sup> Hz/s", table_cell), Paragraph("1/10 slope", table_cell)],
         [Paragraph("Time-Bandwidth Product (TB = <i>B</i> · <i>τ<sub>p</sub></i>)", table_cell), Paragraph("40.0 (16.02 dB)", table_cell), Paragraph("400.0 (26.02 dB)", table_cell), Paragraph("+10.0 dB compression gain", table_cell)],
-        [Paragraph("Theoretical Matched-Filter SNR (<i>P<sub>r</sub> τ<sub>p</sub> / N</i><sub>0</sub>)", table_cell), Paragraph("17.44 dB", table_cell), Paragraph("27.44 dB", table_cell), Paragraph("<b>+10.00 dB exact boost</b>", table_cell)],
-        [Paragraph("Simulated Measured Peak SNR", table_cell), Paragraph("17.13 dB", table_cell), Paragraph("27.31 dB", table_cell), Paragraph("<b>+10.18 dB (Validates Theory)</b>", table_cell)],
+        [Paragraph("Theoretical Matched-Filter SNR (<i>P<sub>r</sub> τ<sub>p</sub> / N</i><sub>0</sub>)", table_cell), Paragraph(result_text('{{THEORY1}} dB'), table_cell), Paragraph(result_text('{{THEORY2}} dB'), table_cell), Paragraph("<b>+10.00 dB exact boost</b>", table_cell)],
+        [Paragraph("Simulated Measured Peak SNR", table_cell), Paragraph(result_text('{{SNR1}} dB'), table_cell), Paragraph(result_text('{{SNR2}} dB'), table_cell), Paragraph(result_text('<b>+{{BOOST}} dB (Validates Theory)</b>'), table_cell)],
         [Paragraph("Nominal Range Resolution <i>c</i> / (2<i>B</i>)", table_cell), Paragraph("37.50 m", table_cell), Paragraph("37.50 m", table_cell), Paragraph("<b>Identical Resolution (1.00×)</b>", table_cell)],
-        [Paragraph("Measured Half-Power (-3 dB) Width", table_cell), Paragraph("35.36 m", table_cell), Paragraph("34.17 m", table_cell), Paragraph("<b>0.97× (Identical Discrimination)</b>", table_cell)],
-        [Paragraph("Peak Sidelobe Level (PSL)", table_cell), Paragraph("-10.49 dB", table_cell), Paragraph("-11.89 dB", table_cell), Paragraph("Matches discrete sampled sinc", table_cell)],
-        [Paragraph("Required SNR (<i>P<sub>D</sub></i> = 0.90, <i>P</i><sub>fa</sub> = 10<sup>-6</sup>)", table_cell), Paragraph("13.18 dB", table_cell), Paragraph("13.18 dB", table_cell), Paragraph("Marcum Q nonfluctuating model", table_cell)],
-        [Paragraph("Theoretical Link Margin", table_cell), Paragraph("+4.25 dB (Marginal)", table_cell), Paragraph("+14.25 dB (Robust)", table_cell), Paragraph("<b>+10.00 dB Link Margin Boost</b>", table_cell)],
-        [Paragraph("CA-CFAR Target Detection Margin", table_cell), Paragraph("+6.81 dB", table_cell), Paragraph("+16.99 dB", table_cell), Paragraph("<b>+10.18 dB above adaptive thresh</b>", table_cell)]
+        [Paragraph("Measured Half-Power (-3 dB) Width", table_cell), Paragraph(result_text('{{WIDTH1}} m'), table_cell), Paragraph(result_text('{{WIDTH2}} m'), table_cell), Paragraph("<b>Similar widths</b>", table_cell)],
+        [Paragraph("Peak Sidelobe Level (PSL)", table_cell), Paragraph(result_text('{{PSL1}} dB'), table_cell), Paragraph(result_text('{{PSL2}} dB'), table_cell), Paragraph("Noisy-profile sidelobe statistic", table_cell)],
+        [Paragraph("Required SNR (<i>P<sub>D</sub></i> = 0.90, <i>P</i><sub>fa</sub> = 10<sup>-6</sup>)", table_cell), Paragraph(result_text('{{REQUIRED}} dB'), table_cell), Paragraph(result_text('{{REQUIRED}} dB'), table_cell), Paragraph("Marcum Q nonfluctuating model", table_cell)],
+        [Paragraph("Theoretical Link Margin", table_cell), Paragraph(result_text('+{{MARGIN1}} dB (Marginal)'), table_cell), Paragraph(result_text('+{{MARGIN2}} dB (Robust)'), table_cell), Paragraph("<b>+10.00 dB Link Margin Boost</b>", table_cell)],
+        [Paragraph("CA-CFAR Target Detection Margin", table_cell), Paragraph(result_text('+{{CFAR1}} dB'), table_cell), Paragraph(result_text('+{{CFAR2}} dB'), table_cell), Paragraph(result_text('<b>+{{CFAR_DELTA}} dB above adaptive thresh</b>'), table_cell)]
     ]
     t = Table(table_data, colWidths=[175, 110, 110, 135])
     t.setStyle(TableStyle([
@@ -354,25 +355,20 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
     fig4_path = Path("figures/track1/fig4_pulse_compression_snr_boost.png")
     if fig4_path.exists():
         story.append(Image(str(fig4_path), width=510, height=155))
-        story.append(Paragraph("<b>Fig. 3:</b> Matched filter output at <i>R</i> = 200 km demonstrating the +10.18 dB SNR boost and similar 35 m mainlobe widths.", ParagraphStyle('Cap2', parent=styles['Normal'], fontSize=6.5, alignment=1, textColor=colors.HexColor('#444444'))))
+        story.append(Paragraph(result_text('<b>Fig. 3:</b> Matched filter output at <i>R</i> = 200 km demonstrating the +{{BOOST}} dB SNR boost and similar 35 m mainlobe widths.'), ParagraphStyle('Cap2', parent=styles['Normal'], fontSize=6.5, alignment=1, textColor=colors.HexColor('#444444'))))
 
     story.append(Spacer(1, 3))
 
     # SECTION 4
     story.append(Paragraph("IV. KEY TAKEAWAYS, PRACTICAL CONSIDERATIONS & LIMITATIONS", sec_heading))
     sec4_text = (
-        "<b>1. Operational Significance:</b> While a 10 μs pulse yields a marginal link margin (+4.25 dB) vulnerable to atmospheric attenuation, "
-        "the 100 μs pulse provides an ironclad +14.25 dB link margin and +16.99 dB CFAR margin for mission-critical tracking at SDSC SHAR.<br/>"
-        "<b>2. Minimum Range Blind Zone:</b> Monostatic transmission blinds reception over <i>R</i><sub>min</sub> = <i>c</i> <i>τ<sub>p</sub></i> / 2. "
-        "For <i>τ</i> = 100 μs, <i>R</i><sub>min</sub> = 15.0 km (versus 1.5 km for 10 μs). Operational tracking radars employ dual-pulse schedules: "
-        "short pulses for near-field acquisition and long chirps for orbital tracking.<br/>"
-        "<b>3. Doppler Shift Coupling:</b> Target radial velocity <i>v<sub>r</sub></i> induces Doppler frequency <i>f<sub>d</sub></i> = 2<i>v<sub>r</sub></i> / <i>λ</i>, "
-        "causing an apparent range bias Δ<i>R</i> = -<i>c f<sub>d</sub></i> / (2 <i>k<sub>r</sub></i>). Transmitting alternating up- and down-chirps "
-        "cancels this bias and simultaneously extracts true target velocity."
+        result_text('<b>1. Operational Significance:</b> While a 10 μs pulse yields a marginal link margin (+{{MARGIN1}} dB) vulnerable to atmospheric attenuation, the 100 μs pulse provides a +{{MARGIN2}} dB link margin and +{{CFAR2}} dB CFAR margin under the assumed link budget.<br/><b>2. Minimum Range Blind Zone:</b> Monostatic transmission blinds reception over <i>R</i><sub>min</sub> = <i>c</i> <i>τ<sub>p</sub></i> / 2. For <i>τ</i> = 100 μs, <i>R</i><sub>min</sub> = 15.0 km (versus 1.5 km for 10 μs). Operational tracking radars employ dual-pulse schedules: short pulses for near-field acquisition and long chirps for orbital tracking.<br/><b>3. Doppler Shift Coupling:</b> Target radial velocity <i>v<sub>r</sub></i> induces Doppler frequency <i>f<sub>d</sub></i> = 2<i>v<sub>r</sub></i> / <i>λ</i>, causing an apparent range bias Δ<i>R</i> = -<i>c f<sub>d</sub></i> / (2 <i>k<sub>r</sub></i>). Transmitting alternating up- and down-chirps cancels this bias in the ideal static-range chirp-pair model.')
     )
-    story.append(Paragraph(sec4_text, body_style))
+    story.append(Paragraph(sec4_text + result_text("<br/><b>Validation:</b> 200 production-chain trials: mean gain {{MC_MEAN}} dB; 95% CI for mean [{{MC_LOW}}, {{MC_HIGH}}] dB. Link parameters are assumptions, not verified radar specifications. CA-CFAR nominal Pfa assumes independent cells; this oversampled output is correlated. Peak SNR and sidelobes above are noisy single-run statistics."), body_style))
 
-    doc.build(story, canvasmaker=NumberedCanvas)
+    with atomic_output(doc.filename) as temporary:
+        doc.filename = str(temporary)
+        doc.build(story, canvasmaker=NumberedCanvas)
     print(f"Successfully generated IEEE Technical Note: {pdf_path.resolve()}")
 
 

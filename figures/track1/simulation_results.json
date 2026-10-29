@@ -1,0 +1,31 @@
+{
+  "snr_meas_1_db": 17.1334669114445,
+  "snr_meas_2_db": 27.30942205326752,
+  "delta_snr_meas_db": 10.175955141823021,
+  "mlw_1": 35.36117648606887,
+  "mlw_2": 34.171579436108004,
+  "psl_1_db": -10.491418577200802,
+  "psl_2_db": -11.888786721690966,
+  "margin_1_db": 4.253601476932328,
+  "margin_2_db": 14.253601476932324,
+  "cfar_margin_1": 4.14350963833048,
+  "cfar_margin_2": 10.07565762203874,
+  "snr_theory_1_db": 17.43709153372635,
+  "snr_theory_2_db": 27.437091533726345,
+  "snr_required_db": 13.183490056794021,
+  "nominal_resolution_m": 37.5,
+  "seed": 2026,
+  "cfar_reference_total": 48,
+  "cfar_guard_total": 16,
+  "monte_carlo": {
+    "n_trials": 200,
+    "mean_boost_db": 9.991879747728609,
+    "std_boost_db": 0.8015956761799244,
+    "mean_ci95_db": [
+      9.880784255002867,
+      10.10297524045435
+    ]
+  },
+  "source_sha256": "796a1c9c54fe57ca2e7e4cfe20cf322146495b3837855b1170817f78aac9aa55",
+  "assumptions": "Synthetic nonfluctuating point target; assumed S-band link parameters. CA-CFAR nominal Pfa assumes independent exponential cells; oversampled MF cells are correlated."
+}

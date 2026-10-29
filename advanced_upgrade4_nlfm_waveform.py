@@ -27,13 +27,15 @@ The NLFM Solution (Nonlinear Frequency Modulation):
   Crucially, because the spectral shaping is achieved entirely via phase modulation:
     - The transmit waveform retains a CONSTANT ENVELOPE (operating the 250 kW solid-state amplifier in full saturation).
     - The receiver uses a TRUE MATCHED FILTER: h_NLFM(t) = s_NLFM*(-t).
-    - Result: Sidelobes suppressed to -35 dB with ZERO MISMATCH LOSS (0.00 dB)!
+    - Measure actual PSL and mainlobe width; tangent NLFM does not guarantee a -35 dB PSL.
 """
 
 import os
 import numpy as np
 import scipy.signal as signal
 import matplotlib.pyplot as plt
+import artifact_io
+from radar_metrics import waveform_metrics
 
 def generate_lfm_pulse(tau_p, B, fs):
     """Standard Linear FM pulse"""
@@ -124,10 +126,14 @@ def run_upgrade4_nlfm():
     snr_eff_nlfm = peak_nlfm / norm_nlfm
     mismatch_loss_nlfm_db = 20.0 * np.log10(snr_eff_nlfm / snr_eff_rect)
     
+    metrics_rect = waveform_metrics(auto_lfm_rect, c / (2 * fs))
+    metrics_taylor = waveform_metrics(auto_lfm_taylor, c / (2 * fs))
+    metrics_nlfm = waveform_metrics(auto_nlfm, c / (2 * fs))
+
     print("Waveform Sidelobe & Mismatch Benchmark:")
-    print(f"  1. LFM + Rectangular Filter : Mismatch Loss =  0.00 dB | PSL = -13.26 dB")
-    print(f"  2. LFM + Taylor Window      : Mismatch Loss = {mismatch_loss_taylor_db:.2f} dB | PSL = -35.00 dB")
-    print(f"  3. NLFM + TRUE Matched Filter: Mismatch Loss = {mismatch_loss_nlfm_db:.2f} dB | PSL = -34.85 dB (ZERO LOSS!)")
+    print(f"  1. LFM + Rectangular Filter : Mismatch Loss =  0.00 dB | PSL = {metrics_rect['psl_db']:.2f} dB")
+    print(f"  2. LFM + Taylor Window      : Mismatch Loss = {mismatch_loss_taylor_db:.2f} dB | PSL = {metrics_taylor['psl_db']:.2f} dB")
+    print(f"  3. NLFM + TRUE Matched Filter: Mismatch Loss = {mismatch_loss_nlfm_db:.2f} dB | PSL = {metrics_nlfm['psl_db']:.2f} dB")
     
     # Range delay axis
     n_pts = len(auto_lfm_rect)
@@ -152,7 +158,7 @@ def run_upgrade4_nlfm():
     # -------------------------------------------------------------
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 11), facecolor='#080d1a')
     plt.suptitle("Nonlinear Frequency Modulation (NLFM) Waveform Design\n"
-                 "-35 dB Sidelobe Suppression with ZERO (0.00 dB) SNR Mismatch Loss (SDSC SHAR Radar)",
+                 f"Measured NLFM PSL: {metrics_nlfm['psl_db']:.2f} dB; matched receiver mismatch: {mismatch_loss_nlfm_db:.2f} dB",
                  color='#f8fafc', fontsize=14, fontweight='bold', y=0.98)
     
     for ax in (ax1, ax2, ax3, ax4):
@@ -193,17 +199,17 @@ def run_upgrade4_nlfm():
     mask_z = (range_offset_m >= -zoom_m) & (range_offset_m <= zoom_m)
     
     ax3.plot(range_offset_m[mask_z], resp_lfm_rect_db[mask_z],
-             color='#94a3b8', lw=1.2, linestyle=':', label="LFM + Rectangular (PSL = -13.3 dB)")
+             color='#94a3b8', lw=1.2, linestyle=':', label=f"LFM rectangular (PSL = {metrics_rect['psl_db']:.2f} dB)")
     ax3.plot(range_offset_m[mask_z], resp_lfm_taylor_db[mask_z],
-             color='#38bdf8', lw=1.6, alpha=0.85, label="LFM + Taylor Window (PSL = -35 dB, Loss = -0.91 dB)")
+             color='#38bdf8', lw=1.6, alpha=0.85, label=f"LFM Taylor (PSL = {metrics_taylor['psl_db']:.2f} dB, loss = {mismatch_loss_taylor_db:.2f} dB)")
     ax3.plot(range_offset_m[mask_z], resp_nlfm_db[mask_z],
-             color='#10b981', lw=2.0, label="Tangent NLFM + Matched Filter (PSL = -35 dB, ZERO LOSS!)")
+             color='#10b981', lw=2.0, label=f"NLFM matched (PSL = {metrics_nlfm['psl_db']:.2f} dB)")
     ax3.axhline(-35.0, color='#fbbf24', linestyle='--', lw=1.2, label="-35 dB Sidelobe Benchmark")
     
     ax3.set_xlabel("Range Relative to Peak (meters)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax3.set_ylabel("Compressed Power (dB)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax3.set_title("Compressed Pulse Profile: Sidelobe Suppression\n"
-                  "NLFM achieves identical -35 dB sidelobes as Taylor, with NO mismatch loss!",
+                  "Measured sampled autocorrelations; sidelobes and width depend on waveform",
                   color='#f8fafc', fontsize=10, fontweight='bold')
     ax3.set_xlim(-zoom_m, zoom_m)
     ax3.set_ylim(-50, 2)
@@ -214,17 +220,17 @@ def run_upgrade4_nlfm():
     mask_res = (range_offset_m >= -zoom_res_m) & (range_offset_m <= zoom_res_m)
     
     ax4.plot(range_offset_m[mask_res], resp_lfm_rect_db[mask_res],
-             color='#94a3b8', lw=1.5, linestyle=':', label="LFM Rectangular (Width = 37.5 m)")
+             color='#94a3b8', lw=1.5, linestyle=':', label=f"LFM Rectangular (half-power = {metrics_rect['half_power_width_m']:.1f} m)")
     ax4.plot(range_offset_m[mask_res], resp_lfm_taylor_db[mask_res],
-             color='#38bdf8', lw=1.8, label="LFM Taylor Window (Width = 43.1 m)")
+             color='#38bdf8', lw=1.8, label=f"LFM Taylor Window (half-power = {metrics_taylor['half_power_width_m']:.1f} m)")
     ax4.plot(range_offset_m[mask_res], resp_nlfm_db[mask_res],
-             color='#10b981', lw=2.0, label="Tangent NLFM (Width = 42.8 m)")
-    ax4.axhline(-3.0, color='#fbbf24', linestyle='--', lw=1.2, label="-3 dB Rayleigh Resolution")
+             color='#10b981', lw=2.0, label=f"Tangent NLFM (half-power = {metrics_nlfm['half_power_width_m']:.1f} m)")
+    ax4.axhline(-3.0, color='#fbbf24', linestyle='--', lw=1.2, label="Half-power (-3 dB)")
     
     ax4.set_xlabel("Range Relative to Peak (meters)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax4.set_ylabel("Power (dB)", color='#cbd5e1', fontsize=9, fontweight='bold')
-    ax4.set_title("Mainlobe Zoom: Rayleigh Resolution Comparison\n"
-                  "NLFM maintains sharp ~42 m mainlobe while preserving 100% receiver SNR",
+    ax4.set_title("Mainlobe Zoom: Half-Power Width Comparison\n"
+                  "Spectral shaping trades mainlobe width against sidelobe suppression",
                   color='#f8fafc', fontsize=10, fontweight='bold')
     ax4.set_xlim(-zoom_res_m, zoom_res_m)
     ax4.set_ylim(-15, 1)
@@ -232,10 +238,11 @@ def run_upgrade4_nlfm():
     
     plt.tight_layout()
     out_path = os.path.join(out_dir, "fig12_nlfm_waveform_vs_lfm.png")
-    plt.savefig(out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
+    artifact_io.save_figure(plt.gcf(), out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
     plt.close()
     print(f"[Generated] {out_path}")
-    print("Upgrade 4 NLFM waveform design completed successfully!")
+    return {"nlfm_psl_db": metrics_nlfm["psl_db"], "nlfm_mismatch_db": float(mismatch_loss_nlfm_db),
+            "rectangular": metrics_rect, "taylor": metrics_taylor, "nlfm": metrics_nlfm}
 
 if __name__ == "__main__":
     run_upgrade4_nlfm()

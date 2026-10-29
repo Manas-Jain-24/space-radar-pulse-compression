@@ -1,6 +1,7 @@
 """Generate the 5-Slide Pitch Deck (.pptx) for Utkrishta 2026 Track 1 using python-pptx."""
 
 from pathlib import Path
+from report_data import result_text, atomic_output
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
@@ -137,7 +138,7 @@ def create_deck(filename="PITCH_DECK.pptx"):
     tf2b = tb2b.text_frame
     tf2b.word_wrap = True
     p = tf2b.paragraphs[0]
-    p.text = "SDSC SHAR Radar Link Specifications"
+    p.text = "Assumed S-band Radar Link Specifications"
     p.font.size = Pt(16)
     p.font.bold = True
     p.font.color.rgb = GOLD_ACCENT
@@ -220,13 +221,13 @@ def create_deck(filename="PITCH_DECK.pptx"):
         ("Parameter / Metric", "Pulse 1 (10 μs)", "Pulse 2 (100 μs)", "Gain / Ratio"),
         ("Time-Bandwidth (TB)", "40 (16.0 dB)", "400 (26.0 dB)", "+10.0 dB"),
         ("Radiated Energy", "2.50 J", "25.00 J", "+10.0 dB"),
-        ("Theoretical MF SNR", "17.44 dB", "27.44 dB", "+10.00 dB"),
-        ("Simulated Peak SNR", "17.13 dB", "27.31 dB", "+10.18 dB (Valid!)"),
+        ("Theoretical MF SNR", result_text('{{THEORY1}} dB'), result_text('{{THEORY2}} dB'), "+10.00 dB"),
+        ("Simulated Peak SNR", result_text('{{SNR1}} dB'), result_text('{{SNR2}} dB'), result_text('+{{BOOST}} dB (Valid!)')),
         ("Nominal Resolution", "37.50 m", "37.50 m", "1.00x (Identical)"),
-        ("Measured -3dB Width", "35.36 m", "34.17 m", "0.97x (Identical)"),
-        ("Required SNR (Pd=0.9)", "13.18 dB", "13.18 dB", "Marcum Q baseline"),
-        ("Link Margin", "+4.25 dB (Marginal)", "+14.25 dB (Robust)", "+10.00 dB Boost"),
-        ("CA-CFAR Margin", "+6.81 dB", "+16.99 dB", "+10.18 dB Boost")
+        ("Measured -3dB Width", result_text('{{WIDTH1}} m'), result_text('{{WIDTH2}} m'), "Similar widths"),
+        ("Required SNR (Pd=0.9)", result_text('{{REQUIRED}} dB'), result_text('{{REQUIRED}} dB'), "Marcum Q baseline"),
+        ("Link Margin", result_text('+{{MARGIN1}} dB (Marginal)'), result_text('+{{MARGIN2}} dB (Robust)'), "+10.00 dB Boost"),
+        ("CA-CFAR Margin", result_text('+{{CFAR1}} dB'), result_text('+{{CFAR2}} dB'), result_text('+{{CFAR_DELTA}} dB Boost'))
     ]
     
     t_shape = s4.shapes.add_table(len(rows), 4, Inches(7.2), Inches(1.6), Inches(5.4), Inches(5.2))
@@ -275,9 +276,9 @@ def create_deck(filename="PITCH_DECK.pptx"):
     p.font.color.rgb = CYAN_ACCENT
 
     insights = [
-        "Core Proof Verified: Matched-filter SNR increases by +10.18 dB (theory: +10.00 dB) while range resolution remains invariant at ~35 m for both 10 μs and 100 μs chirps.",
-        "Operational Impact: At 200 km, the 100 μs pulse delivers +14.25 dB link margin and +16.99 dB CFAR margin, preventing target loss during rocket staging.",
-        "Bonus Exp 1 (Multi-Target at 200 km): Two targets separated by 50 m merge into a 15 km blob with unmodulated pulses, but are cleanly separated into 2 distinct peaks with LFM compression.",
+        result_text('Core Proof Verified: Matched-filter SNR increases by +{{BOOST}} dB (theory: +10.00 dB) while range resolution remains invariant at ~35 m for both 10 μs and 100 μs chirps.'),
+        result_text('Validation: 200 production trials give mean {{MC_MEAN}} dB; 95% mean CI [{{MC_LOW}}, {{MC_HIGH}}] dB. Assumed link parameters; correlated MF cells limit nominal CFAR Pfa calibration.'),
+        "Bonus Exp 1 (Multi-Target at 200 km): The 50 m pair yields one local peak in this coherent unequal-target realization. Nominal c/(2B) resolution alone does not guarantee separation; phase, contrast and noise matter.",
         "Bonus Exp 2 (Mach 5 Doppler Coupling): A 1500 m/s rocket induces -112.5 m range bias. We implemented Chirp Diversity (Up/Down chirp pairs), canceling the bias to -3 m and extracting exact velocity (1500 m/s)!"
     ]
     for ins in insights:
@@ -295,7 +296,8 @@ def create_deck(filename="PITCH_DECK.pptx"):
     elif fig7_path.exists():
         s5.shapes.add_picture(str(fig7_path), Inches(6.8), Inches(1.6), width=Inches(5.7))
 
-    prs.save(filename)
+    with atomic_output(filename) as temporary:
+        prs.save(temporary)
     print(f"Successfully generated 5-Slide Pitch Deck: {Path(filename).resolve()}")
 
 if __name__ == "__main__":

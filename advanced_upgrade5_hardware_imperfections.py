@@ -24,13 +24,14 @@ In operational SDSC SHAR ground tracking stations, physical digital receivers in
 
 3. Quadrature Demodulation I/Q Imbalance:
    - Gain imbalance (g_I != g_Q) and non-orthogonal phase skew (Delta phi != 0) generate
-     an unwanted mirror image target ("ghost peak") at negative range/Doppler.
+     a conjugate image component; its compressed response depends on the waveform.
 """
 
 import os
 import numpy as np
 import scipy.signal as signal
 import matplotlib.pyplot as plt
+import artifact_io
 
 def quantize_signal(x, n_bits, v_max=1.0):
     """Uniform mid-tread ADC quantizer with saturation clipping"""
@@ -125,14 +126,19 @@ def run_upgrade5_hardware():
     # -------------------------------------------------------------
     phase_jitter_degrees = [0.0, 5.0, 15.0, 30.0]  # RMS phase jitter
     phase_noise_results = {}
+    actual_phase_rms = {}
     
     for sigma_deg in phase_jitter_degrees:
         sigma_rad = np.radians(sigma_deg)
-        # Colored random-walk phase noise
+        # Low-pass Gaussian phase noise (a simplified LO model)
         white_phase = sigma_rad * np.random.randn(N_total)
-        # Apply lowpass filter to model 1/f^2 oscillator phase noise
+        # Apply lowpass filter to give a finite-bandwidth phase disturbance
         b_lo, a_lo = signal.butter(2, 0.05)
         filtered_phase = signal.lfilter(b_lo, a_lo, white_phase)
+        if sigma_rad > 0:
+            filtered_phase -= np.mean(filtered_phase)
+            filtered_phase *= sigma_rad / np.sqrt(np.mean(filtered_phase ** 2))
+        actual_phase_rms[sigma_deg] = float(np.degrees(np.sqrt(np.mean(filtered_phase ** 2))))
         
         # Corrupt echo with phase noise
         rx_phase_noisy = np.copy(noisy_rx_base) * np.exp(1j * filtered_phase)
@@ -158,7 +164,7 @@ def run_upgrade5_hardware():
     # -------------------------------------------------------------
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 11), facecolor='#080d1a')
     plt.suptitle("Receiver Hardware Realism: ADC Quantization, Phase Noise & I/Q Imbalance\n"
-                 "SDSC SHAR Digital Receiver Performance Verification (Target at 200 km)",
+                 "Synthetic Receiver Sensitivity Study (Target at 200 km)",
                  color='#f8fafc', fontsize=14, fontweight='bold', y=0.98)
     
     for ax in (ax1, ax2, ax3, ax4):
@@ -196,7 +202,7 @@ def run_upgrade5_hardware():
     
     p_ref = np.max(comp_float_power[mask_r])
     ax2.plot(r_plot, 10*np.log10(comp_results[6][mask_r] / p_ref + 1e-12),
-             color='#f43f5e', lw=1.2, alpha=0.8, label="6-bit ADC (Elevated Quantization Noise Floor)")
+             color='#f43f5e', lw=1.2, alpha=0.8, label=f"6-bit ADC (SNR change {measured_snrs[0]-snr_float:+.2f} dB)")
     ax2.plot(r_plot, 10*np.log10(comp_results[12][mask_r] / p_ref + 1e-12),
              color='#38bdf8', lw=1.8, label="12-bit ADC (Matches Float64 Perfectly)")
     ax2.plot(r_plot, 10*np.log10(comp_float_power[mask_r] / p_ref + 1e-12),
@@ -205,7 +211,7 @@ def run_upgrade5_hardware():
     ax2.set_xlabel("Radar Range (km)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax2.set_ylabel("Normalized Power (dB)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax2.set_title("Quantization Noise Floor: 6-bit vs 12-bit vs Float64\n"
-                  "6-bit raises noise floor by ~12 dB; 12-bit is indistinguishable from unquantized",
+                  f"Measured 6-bit peak SNR change: {measured_snrs[0]-snr_float:+.2f} dB; one noise realization",
                   color='#f8fafc', fontsize=10, fontweight='bold')
     ax2.set_xlim(r_zoom_min, r_zoom_max)
     ax2.set_ylim(-35, 2)
@@ -221,7 +227,7 @@ def run_upgrade5_hardware():
     ax3.set_xlabel("Radar Range (km)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax3.set_ylabel("Normalized Response (dB)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax3.set_title("LO Phase Jitter & Sidelobe Pedestal Elevation\n"
-                  "Phase jitter <= 5° RMS maintains -35 dB sidelobes; excessive jitter (>15°) raises noise pedestal",
+                  "Low-pass phase noise rescaled to the labelled RMS; no fixed sidelobe guarantee",
                   color='#f8fafc', fontsize=10, fontweight='bold')
     ax3.set_xlim(r_zoom_min, r_zoom_max)
     ax3.set_ylim(-45, 2)
@@ -240,7 +246,7 @@ def run_upgrade5_hardware():
     ax4.set_xlabel("Radar Range (km)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax4.set_ylabel("Normalized Response (dB)", color='#cbd5e1', fontsize=9, fontweight='bold')
     ax4.set_title("Quadrature I/Q Imbalance Sensitivity\n"
-                  "Small gain/phase imbalance raises sidelobe clutter; digital Gram-Schmidt calibration fixes it",
+                  "Gain/phase imbalance sensitivity; receiver calibration is not implemented",
                   color='#f8fafc', fontsize=10, fontweight='bold')
     ax4.set_xlim(r_zoom_min, r_zoom_max)
     ax4.set_ylim(-45, 2)
@@ -248,10 +254,11 @@ def run_upgrade5_hardware():
     
     plt.tight_layout()
     out_path = os.path.join(out_dir, "fig13_receiver_hardware_imperfections.png")
-    plt.savefig(out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
+    artifact_io.save_figure(plt.gcf(), out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
     plt.close()
     print(f"[Generated] {out_path}")
-    print("Upgrade 5 Receiver Hardware Realism analysis completed successfully!")
+    return {"adc_snr_db": dict(zip(bit_depths, map(float, measured_snrs))),
+            "float_snr_db": float(snr_float), "phase_rms_degrees": actual_phase_rms}
 
 if __name__ == "__main__":
     run_upgrade5_hardware()

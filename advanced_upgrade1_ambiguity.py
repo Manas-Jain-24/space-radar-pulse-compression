@@ -10,7 +10,7 @@ The Woodward Ambiguity Function chi(tau, nu) characterizes the matched filter ou
 when a target echo is delayed by tau and Doppler-shifted by nu:
     chi(tau, nu) = integral_{-inf}^{inf} s(t) s*(t - tau) exp(j * 2 * pi * nu * t) dt
 
-Key Physical Properties Verified:
+Analytical properties (the plots do not numerically validate the volume integral):
   1. Peak Value: |chi(0, 0)|^2 = 1 (Normalized total energy)
   2. Volume Invariance: iintegral |chi(tau, nu)|^2 dtau dnu = 1 (Energy conservation)
   3. LFM Ridge Shearing: For chirp slope kr = B / tau_p, the ambiguity ridge lies along
@@ -23,6 +23,7 @@ Key Physical Properties Verified:
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import artifact_io
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -218,7 +219,7 @@ def run_upgrade1_ambiguity():
         
     plt.tight_layout()
     out_path = os.path.join(out_dir, "fig9_ambiguity_function_3d_and_contours.png")
-    plt.savefig(out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
+    artifact_io.save_figure(plt.gcf(), out_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor='none')
     plt.close()
     print(f"[Generated] {out_path}")
     print("Upgrade 1 Ambiguity Function analysis completed successfully!")

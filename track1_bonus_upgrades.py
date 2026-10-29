@@ -11,7 +11,9 @@ from pathlib import Path
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import artifact_io
 from scipy.fft import fft, ifft, next_fast_len
+from scipy.signal import find_peaks
 
 # System parameters
 C = 3.0e8                        # Speed of light (m/s)
@@ -109,6 +111,11 @@ def run_multitarget_experiment(output_dir="figures/track1"):
     range_axis_m = np.arange(len(y_lfm)) * (C / (2 * FS))
     zoom_mask = np.abs(range_axis_m - 200.0e3) <= 250.0
     r_zoom = range_axis_m[zoom_mask] - 200.0e3
+    target_mask = (range_axis_m >= r1 - DELTA_R) & (range_axis_m <= r2 + DELTA_R)
+    local_peaks, _ = find_peaks(p_lfm_db[target_mask], prominence=1.0)
+    measured_peak_ranges = range_axis_m[target_mask][local_peaks]
+    peak_count = len(measured_peak_ranges)
+    print(f"Target-window local peaks (>=1 dB prominence): {peak_count}; ranges: {measured_peak_ranges}")
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
     # Unmodulated pulse
@@ -122,14 +129,14 @@ def run_multitarget_experiment(output_dir="figures/track1"):
 
     # LFM pulse
     ax2.plot(r_zoom, p_lfm_db[zoom_mask], color="#d62728", lw=1.5, marker="o", ms=4, label="LFM 100 μs Chirp (B = 4 MHz, dR = 37.5 m)")
-    ax2.axvline(0, color="blue", ls="--", lw=1.2, label=f"Target 1 Resolved (Peak SNR = {np.max(p_lfm_db[zoom_mask]):.2f} dB)")
-    ax2.axvline(sep_m, color="red", ls="--", lw=1.2, label=f"Target 2 Resolved (50 m separation)")
+    ax2.axvline(0, color="blue", ls="--", lw=1.2, label=f"True target 1 (profile peak = {np.max(p_lfm_db[zoom_mask]):.2f} dB)")
+    ax2.axvline(sep_m, color="red", ls="--", lw=1.2, label="True target 2 (50 m separation)")
     
     # Separation arrow
     ax2.annotate("", xy=(sep_m, 20), xytext=(0, 20), arrowprops=dict(arrowstyle="<->", color="black", lw=1.5))
     ax2.text(sep_m / 2, 21.5, f"ΔR = {sep_m:.0f} m Separation", ha="center", fontsize=10, fontweight="bold")
 
-    ax2.set_title("LFM 100 μs Chirp: Two Cleanly Resolved Peaks (ΔR = 37.5 m Resolution Preserved)", fontsize=11, fontweight="bold")
+    ax2.set_title(f"LFM 100 μs Chirp: {peak_count} Measured Target-Window Peak(s); Phase and Contrast Affect Resolution", fontsize=11, fontweight="bold")
     ax2.set_xlabel("Range Offset from 200 km (m)", fontsize=10)
     ax2.set_ylabel("Output SNR (dB)", fontsize=10)
     ax2.grid(True, alpha=0.3)
@@ -138,15 +145,16 @@ def run_multitarget_experiment(output_dir="figures/track1"):
     fig.suptitle("Upgrade 1: Multi-Target Resolution Demonstration at R = 200 km (50 m Separation)", fontsize=13, fontweight="bold")
     fig.tight_layout()
     fig_file = out_path / "fig6_multitarget_resolution.png"
-    fig.savefig(fig_file, dpi=300)
+    artifact_io.save_figure(fig, fig_file, dpi=300)
     print(f"Saved: {fig_file}")
     plt.close(fig)
+    return {"target_window_peak_count": peak_count, "peak_ranges_m": measured_peak_ranges.tolist()}
 
 
 # ==============================================================================
 # UPGRADE 2: RANGE-DOPPLER COUPLING & CHIRP DIVERSITY
 # ==============================================================================
-def run_doppler_coupling_experiment(output_dir="figures/track1"):
+def run_doppler_coupling_experiment(output_dir="figures/track1", vr_true=1500.0):
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(2026)
@@ -157,7 +165,6 @@ def run_doppler_coupling_experiment(output_dir="figures/track1"):
 
     # Space target at R = 200 km moving at vr = +1500 m/s (closing radial velocity, Mach 5 rocket ascent)
     r_true = 200.0e3
-    vr_true = 1500.0                 # Closing velocity = 1500 m/s
     fd_true = 2 * vr_true / LAMBDA_C # Doppler frequency = 30.0 kHz
     tau_d = 2 * r_true / C
 
@@ -171,9 +178,9 @@ def run_doppler_coupling_experiment(output_dir="figures/track1"):
     dr_shift_theory = C * dt_shift_theory / 2  # -112.5 meters!
 
     print(f"  True Target Range           : {r_true/1e3:.3f} km")
-    print(f"  Target Radial Velocity (vr) : {vr_true:.1f} m/s (Mach 5.0 ascent)")
+    print(f"  Target Radial Velocity (vr) : {vr_true:.1f} m/s (positive closing velocity)")
     print(f"  Induced Doppler Shift (fd)  : {fd_true/1e3:.2f} kHz")
-    print(f"  Theoretical Range Shift (Up): {dr_shift_theory:+.2f} m (3 resolution cells!)")
+    print(f"  Theoretical Range Shift (Up): {dr_shift_theory:+.2f} m ({abs(dr_shift_theory)/DELTA_R:.1f} nominal resolution cells)")
 
     t_pri = np.arange(N_PRI) * DT
     t_pulse = np.arange(n_pulse) * DT - TAU_2 / 2
@@ -208,7 +215,7 @@ def run_doppler_coupling_experiment(output_dir="figures/track1"):
     p_down_db = 10 * np.log10(np.abs(y_down)**2 / nv_out + 1e-12)
 
     range_axis_m = np.arange(len(y_up)) * (C / (2 * FS))
-    zoom_mask = np.abs(range_axis_m - r_true) <= 350.0
+    zoom_mask = np.abs(range_axis_m - r_true) <= abs(dr_shift_theory) + 350.0
     r_zoom = range_axis_m[zoom_mask] - r_true
 
     # Find measured peak locations
@@ -261,7 +268,7 @@ def run_doppler_coupling_experiment(output_dir="figures/track1"):
     summary_text = (
         "CHIRP DIVERSITY (UP/DOWN CHIRP PAIR) AMBIGUITY RESOLUTION PRINCIPLE:\n\n"
         f"1. Physical Cause: In an LFM matched filter, target Doppler frequency fd = 2*vr/lambda produces a time shift dt = -fd/kr.\n"
-        f"   For a 100 μs chirp at Mach 5 (vr = {vr_true:.0f} m/s, fd = {fd_true/1e3:.1f} kHz), this creates an apparent range error of {dr_shift_theory:+.1f} meters!\n\n"
+        f"   For a 100 μs chirp (vr = {vr_true:.0f} m/s, fd = {fd_true/1e3:.1f} kHz), this creates an apparent range error of {dr_shift_theory:+.1f} meters!\n\n"
         "2. The Chirp Diversity Solution:\n"
         "   • Transmit an Up-Chirp (+kr) followed by a Down-Chirp (-kr).\n"
         "   • The Up-Chirp shifts left by ΔR, while the Down-Chirp shifts right by ΔR.\n\n"
@@ -276,9 +283,11 @@ def run_doppler_coupling_experiment(output_dir="figures/track1"):
     fig.suptitle("Upgrade 2: High-Velocity Space Target Range-Doppler Coupling & Chirp Diversity Fusion", fontsize=13, fontweight="bold")
     fig.tight_layout()
     fig_file = out_path / "fig7_doppler_coupling_and_chirp_diversity.png"
-    fig.savefig(fig_file, dpi=300)
+    artifact_io.save_figure(fig, fig_file, dpi=300)
     print(f"Saved: {fig_file}")
     plt.close(fig)
+    return {"range_m": float(r_estimated), "velocity_ms": float(vr_estimated),
+            "range_error_m": float(r_estimated - r_true)}
 
 
 # ==============================================================================
@@ -396,7 +405,7 @@ def run_windowing_experiment(output_dir="figures/track1"):
     fig.suptitle("Upgrade 3: Sidelobe Suppression & Weak Target Unmasking in Space Surveillance", fontsize=13, fontweight="bold")
     fig.tight_layout()
     fig_file = out_path / "fig8_windowing_sidelobe_suppression.png"
-    fig.savefig(fig_file, dpi=300)
+    artifact_io.save_figure(fig, fig_file, dpi=300)
     print(f"Saved: {fig_file}")
     plt.close(fig)
 
