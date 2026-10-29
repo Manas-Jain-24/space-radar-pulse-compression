@@ -111,7 +111,7 @@ class NumberedCanvas(canvas.Canvas):
         
         # Footer (Bottom)
         self.line(36, 42, 576, 42)
-        footer_text = "IEEE Technical Note | SDSC SHAR & SSG × Research Club, IIIT Sri City"
+        footer_text = "IEEE Technical Note | Track 1 | SSG × Research Club, IIIT Sri City"
         self.drawString(36, 30, footer_text)
         page_str = f"Page {self._pageNumber} of {page_count}"
         self.drawRightString(576, 30, page_str)
@@ -138,8 +138,8 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         'DocTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=11.5,
-        leading=14.5,
+        fontSize=14,
+        leading=17,
         alignment=1,
         textColor=colors.HexColor('#002B49')
     )
@@ -148,8 +148,8 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         'DocSubtitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=8.0,
-        leading=10.5,
+        fontSize=8.5,
+        leading=11,
         alignment=1,
         textColor=colors.HexColor('#222222')
     )
@@ -158,8 +158,8 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         'SecHeading',
         parent=styles['Heading2'],
         fontName='Helvetica-Bold',
-        fontSize=9.0,
-        leading=11.5,
+        fontSize=10.0,
+        leading=13,
         textColor=colors.HexColor('#002B49'),
         spaceBefore=4,
         spaceAfter=2,
@@ -170,8 +170,8 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         'Body',
         parent=styles['BodyText'],
         fontName='Times-Roman',
-        fontSize=7.8,
-        leading=9.8,
+        fontSize=8.7,
+        leading=11.1,
         alignment=4,
         spaceAfter=2
     )
@@ -180,22 +180,22 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         'TableCell',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=6.8,
-        leading=8.2
+        fontSize=7.5,
+        leading=9.5
     )
     table_cell_bold = ParagraphStyle(
         'TableCellBold',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=6.8,
-        leading=8.2,
+        fontSize=7.5,
+        leading=9.5,
         textColor=colors.HexColor('#002B49')
     )
 
     story = []
 
     # Title & Metadata
-    title_text = "LFM Pulse Compression, Link Budget Modeling & +10 dB SNR Enhancement for Long-Range Radar Target Detection"
+    title_text = "LFM Pulse Compression for a 200 km Radar Target"
     story.append(Paragraph(title_text, title_style))
     story.append(Spacer(1, 1))
     
@@ -204,14 +204,31 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
     story.append(Spacer(1, 3))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#002B49'), spaceAfter=4))
 
+    abstract = (
+        "<b>RESULT IN BRIEF.</b> At fixed peak power, the 100 μs LFM pulse delivers "
+        "<b>+{{BOOST}} dB measured matched-filter SNR gain</b> over the 10 μs pulse, while "
+        "both retain <b>37.5 m nominal range resolution</b>. A 200-trial production-chain study "
+        "finds +{{MC_MEAN}} dB mean gain (95% confidence interval for the mean: {{MC_LOW}}–{{MC_HIGH}} dB)."
+    )
+    abstract_box = Table([[Paragraph(result_text(abstract), body_style)]], colWidths=[530])
+    abstract_box.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#EFF6FA')),
+        ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#B8D5E4')),
+        ('LEFTPADDING', (0, 0), (-1, -1), 9),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(abstract_box)
+
     # SECTION 1
     story.append(Paragraph("I. PROBLEM STATEMENT & MATHEMATICAL FORMULATION", sec_heading))
     sec1_a = (
-        "<b>A. Radar Energy vs. Resolution Conflict:</b> In long-range orbital tracking and launch vehicle surveillance at SDSC SHAR "
-        "(target range <i>R</i> = 200 km, RCS <i>σ</i> = 1.0 m<sup>2</sup>), detecting weak echoes requires maximizing radiated pulse energy "
+        "<b>A. Radar Energy vs. Resolution Conflict:</b> The Track 1 synthetic target has range <i>R</i> = 200 km and "
+        "RCS <i>σ</i> = 1.0 m<sup>2</sup>. Detecting its weak echo requires sufficient radiated pulse energy "
         "<i>E<sub>t</sub></i> = <i>P<sub>t</sub></i> · <i>τ<sub>p</sub></i>. For unmodulated rectangular pulses, range resolution is constrained by pulse duration: "
         "Δ<i>R</i><sub>unmod</sub> = <i>c</i> · <i>τ<sub>p</sub></i> / 2. Widening an unmodulated pulse from 10 μs to 100 μs scales energy by +10 dB "
-        "but degrades range resolution from 1.5 km to 15.0 km, rendering target discrimination impossible. Applying Linear Frequency Modulation (LFM) "
+        "but degrades nominal range resolution from 1.5 km to 15.0 km. Applying Linear Frequency Modulation (LFM) "
         "decouples resolution from pulse width:"
     )
     story.append(Paragraph(sec1_a, body_style))
@@ -224,7 +241,7 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
     sec1_b = (
         "<b>B. LFM Chirp & Matched Filter Pulse Compression:</b> A linear chirp sweeps frequency over sweep bandwidth <i>B</i> = 4.0 MHz within duration <i>τ<sub>p</sub></i> "
         "with chirp slope <i>k<sub>r</sub></i> = <i>B</i> / <i>τ<sub>p</sub></i>. The receiver matched filter <i>h</i>(<i>t</i>) = <i>s</i>*(-<i>t</i>) compresses the echo "
-        "into a sinc envelope whose Rayleigh resolution depends strictly on bandwidth <i>B</i>:"
+        "into a narrow mainlobe. Its nominal range resolution is set primarily by bandwidth <i>B</i>:"
     )
     story.append(Paragraph(sec1_b, body_style))
 
@@ -234,8 +251,9 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         story.append(Image(str(eq2_path), width=510, height=25.5))
 
     sec1_c = (
-        "<b>C. S-Band Radar Link Budget:</b> Target echo power <i>P<sub>r</sub></i> at <i>R</i> = 200 km (<i>P<sub>t</sub></i> = 250 kW, <i>G</i> = 40 dBi, "
-        "<i>λ</i> = 0.1 m [3.0 GHz], <i>L</i> = 3.0 dB, <i>F</i> = 2.5 dB) via the Radar Range Equation yields:"
+        "<b>C. Illustrative S-Band Link Budget:</b> We assume <i>P<sub>t</sub></i> = 250 kW, <i>G</i> = 40 dBi per antenna, "
+        "<i>λ</i> = 0.1 m [3.0 GHz], <i>L</i> = 3.0 dB, and <i>F</i> = 2.5 dB. These are simulation inputs, not published facility specifications. "
+        "At <i>R</i> = 200 km, the Radar Range Equation yields:"
     )
     story.append(Paragraph(sec1_c, body_style))
 
@@ -263,7 +281,8 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
         "at <i>f<sub>s</sub></i> = 16 MHz; (2) Pulse train synthesis at PRT = 2.0 ms (PRF = 500 Hz, <i>R</i><sub>unamb</sub> = 300 km); "
         "(3) Target propagation channel at <i>R</i> = 200 km (round-trip delay <i>τ<sub>d</sub></i> = 1.333 ms) with complex circular AWGN; "
         "(4) Zero-padded FFT cross-correlation matched filtering preventing circular wraparound; "
-        "(5) 1-D CA-CFAR detection (48 reference cells, 16 guard cells, <i>P</i><sub>fa</sub> = 10<sup>-6</sup>)."
+        "(5) 1-D CA-CFAR detection (24 reference and 8 guard cells on each side, <i>P</i><sub>fa</sub> = 10<sup>-6</sup>). "
+        "The same peak power, target, and channel assumptions are used in both runs."
     )
     story.append(Paragraph(sec2_text, body_style))
 
@@ -310,7 +329,7 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
     fig2_path = Path("figures/track1/fig2_lfm_waveforms_and_spectra.png")
     if fig2_path.exists():
         story.append(Spacer(1, 2))
-        story.append(Image(str(fig2_path), width=510, height=135))
+        story.append(Image(str(fig2_path), width=510, height=155))
         story.append(Paragraph("<b>Fig. 2:</b> Synthesized LFM chirp time-domain waveforms and normalized frequency spectra (<i>B</i> = 4.0 MHz) for 10 μs and 100 μs pulses.", ParagraphStyle('Cap', parent=styles['Normal'], fontSize=6.5, alignment=1, textColor=colors.HexColor('#444444'))))
 
     story.append(PageBreak()) # EXACTLY ADVANCE TO PAGE 2
@@ -324,47 +343,58 @@ def build_pdf(filename="TECHNICAL_NOTE_IEEE.pdf"):
          Paragraph("<b>Pulse 1 (<i>τ</i><sub>1</sub> = 10 μs)</b>", table_cell_bold),
          Paragraph("<b>Pulse 2 (<i>τ</i><sub>2</sub> = 100 μs)</b>", table_cell_bold),
          Paragraph("<b>Enhancement / Comparison</b>", table_cell_bold)],
-        [Paragraph("Pulse Duration (<i>τ<sub>p</sub></i>)", table_cell), Paragraph("10.0 μs", table_cell), Paragraph("100.0 μs", table_cell), Paragraph("×10.0 (+10.0 dB)", table_cell)],
-        [Paragraph("Duty Cycle (<i>τ<sub>p</sub></i> / PRT, PRT = 2 ms)", table_cell), Paragraph("0.50 %", table_cell), Paragraph("5.00 %", table_cell), Paragraph("×10.0", table_cell)],
         [Paragraph("Radiated Pulse Energy (<i>P<sub>t</sub></i> = 250 kW)", table_cell), Paragraph("2.50 J", table_cell), Paragraph("25.00 J", table_cell), Paragraph("+10.0 dB", table_cell)],
-        [Paragraph("Chirp Sweep Slope (<i>k<sub>r</sub></i> = <i>B</i> / <i>τ<sub>p</sub></i>)", table_cell), Paragraph("4.00 × 10<sup>11</sup> Hz/s", table_cell), Paragraph("4.00 × 10<sup>10</sup> Hz/s", table_cell), Paragraph("1/10 slope", table_cell)],
-        [Paragraph("Time-Bandwidth Product (TB = <i>B</i> · <i>τ<sub>p</sub></i>)", table_cell), Paragraph("40.0 (16.02 dB)", table_cell), Paragraph("400.0 (26.02 dB)", table_cell), Paragraph("+10.0 dB compression gain", table_cell)],
-        [Paragraph("Theoretical Matched-Filter SNR (<i>P<sub>r</sub> τ<sub>p</sub> / N</i><sub>0</sub>)", table_cell), Paragraph(result_text('{{THEORY1}} dB'), table_cell), Paragraph(result_text('{{THEORY2}} dB'), table_cell), Paragraph("<b>+10.00 dB exact boost</b>", table_cell)],
-        [Paragraph("Simulated Measured Peak SNR", table_cell), Paragraph(result_text('{{SNR1}} dB'), table_cell), Paragraph(result_text('{{SNR2}} dB'), table_cell), Paragraph(result_text('<b>+{{BOOST}} dB (Validates Theory)</b>'), table_cell)],
-        [Paragraph("Nominal Range Resolution <i>c</i> / (2<i>B</i>)", table_cell), Paragraph("37.50 m", table_cell), Paragraph("37.50 m", table_cell), Paragraph("<b>Identical Resolution (1.00×)</b>", table_cell)],
-        [Paragraph("Measured Half-Power (-3 dB) Width", table_cell), Paragraph(result_text('{{WIDTH1}} m'), table_cell), Paragraph(result_text('{{WIDTH2}} m'), table_cell), Paragraph("<b>Similar widths</b>", table_cell)],
-        [Paragraph("Peak Sidelobe Level (PSL)", table_cell), Paragraph(result_text('{{PSL1}} dB'), table_cell), Paragraph(result_text('{{PSL2}} dB'), table_cell), Paragraph("Noisy-profile sidelobe statistic", table_cell)],
-        [Paragraph("Required SNR (<i>P<sub>D</sub></i> = 0.90, <i>P</i><sub>fa</sub> = 10<sup>-6</sup>)", table_cell), Paragraph(result_text('{{REQUIRED}} dB'), table_cell), Paragraph(result_text('{{REQUIRED}} dB'), table_cell), Paragraph("Marcum Q nonfluctuating model", table_cell)],
-        [Paragraph("Theoretical Link Margin", table_cell), Paragraph(result_text('+{{MARGIN1}} dB (Marginal)'), table_cell), Paragraph(result_text('+{{MARGIN2}} dB (Robust)'), table_cell), Paragraph("<b>+10.00 dB Link Margin Boost</b>", table_cell)],
-        [Paragraph("CA-CFAR Target Detection Margin", table_cell), Paragraph(result_text('+{{CFAR1}} dB'), table_cell), Paragraph(result_text('+{{CFAR2}} dB'), table_cell), Paragraph(result_text('<b>+{{CFAR_DELTA}} dB above adaptive thresh</b>'), table_cell)]
+        [Paragraph("Theoretical Matched-Filter SNR", table_cell), Paragraph(result_text("{{THEORY1}} dB"), table_cell), Paragraph(result_text("{{THEORY2}} dB"), table_cell), Paragraph("<b>+10.00 dB predicted</b>", table_cell)],
+        [Paragraph("Measured Peak SNR", table_cell), Paragraph(result_text("{{SNR1}} dB"), table_cell), Paragraph(result_text("{{SNR2}} dB"), table_cell), Paragraph(result_text("<b>+{{BOOST}} dB observed</b>"), table_cell)],
+        [Paragraph("Nominal Range Resolution <i>c</i> / (2<i>B</i>)", table_cell), Paragraph("37.50 m", table_cell), Paragraph("37.50 m", table_cell), Paragraph("Same 4 MHz bandwidth", table_cell)],
+        [Paragraph("Measured Half-Power (-3 dB) Width", table_cell), Paragraph(result_text("{{WIDTH1}} m"), table_cell), Paragraph(result_text("{{WIDTH2}} m"), table_cell), Paragraph("Similar compressed peaks", table_cell)],
+        [Paragraph("Theoretical Link Margin", table_cell), Paragraph(result_text("+{{MARGIN1}} dB"), table_cell), Paragraph(result_text("+{{MARGIN2}} dB"), table_cell), Paragraph("Illustrative link model", table_cell)],
+        [Paragraph("CA-CFAR Target Detection Margin", table_cell), Paragraph(result_text("+{{CFAR1}} dB"), table_cell), Paragraph(result_text("+{{CFAR2}} dB"), table_cell), Paragraph("Adaptive threshold", table_cell)]
     ]
     t = Table(table_data, colWidths=[175, 110, 110, 135])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EBF3F9')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#002B49')),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.2),
-        ('TOPPADDING', (0, 0), (-1, -1), 1.2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')])
     ]))
     story.append(t)
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        result_text("<b>Validation:</b> The fixed-seed core run measures +{{BOOST}} dB versus the +10.00 dB "
+        "prediction. A separate 200-trial production-chain experiment measures +{{MC_MEAN}} dB "
+        "mean gain (95% confidence interval for the mean {{MC_LOW}}–{{MC_HIGH}} dB). "
+        "The small single-run offset reflects finite noise and sampling effects."),
+        body_style))
 
     # Embed Figure 2: Pulse compression zoom
     fig4_path = Path("figures/track1/fig4_pulse_compression_snr_boost.png")
     if fig4_path.exists():
-        story.append(Image(str(fig4_path), width=510, height=155))
-        story.append(Paragraph(result_text('<b>Fig. 3:</b> Matched filter output at <i>R</i> = 200 km demonstrating the +{{BOOST}} dB SNR boost and similar 35 m mainlobe widths.'), ParagraphStyle('Cap2', parent=styles['Normal'], fontSize=6.5, alignment=1, textColor=colors.HexColor('#444444'))))
+        story.append(Image(str(fig4_path), width=510, height=210))
+        story.append(Paragraph(result_text("<b>Fig. 3:</b> Matched filter output at <i>R</i> = 200 km demonstrating the +{{BOOST}} dB SNR boost and similar 35 m mainlobe widths."), ParagraphStyle('Cap2', parent=styles['Normal'], fontSize=6.5, alignment=1, textColor=colors.HexColor('#444444'))))
 
     story.append(Spacer(1, 3))
 
     # SECTION 4
     story.append(Paragraph("IV. KEY TAKEAWAYS, PRACTICAL CONSIDERATIONS & LIMITATIONS", sec_heading))
     sec4_text = (
-        result_text('<b>1. Operational Significance:</b> While a 10 μs pulse yields a marginal link margin (+{{MARGIN1}} dB) vulnerable to atmospheric attenuation, the 100 μs pulse provides a +{{MARGIN2}} dB link margin and +{{CFAR2}} dB CFAR margin under the assumed link budget.<br/><b>2. Minimum Range Blind Zone:</b> Monostatic transmission blinds reception over <i>R</i><sub>min</sub> = <i>c</i> <i>τ<sub>p</sub></i> / 2. For <i>τ</i> = 100 μs, <i>R</i><sub>min</sub> = 15.0 km (versus 1.5 km for 10 μs). Operational tracking radars employ dual-pulse schedules: short pulses for near-field acquisition and long chirps for orbital tracking.<br/><b>3. Doppler Shift Coupling:</b> Target radial velocity <i>v<sub>r</sub></i> induces Doppler frequency <i>f<sub>d</sub></i> = 2<i>v<sub>r</sub></i> / <i>λ</i>, causing an apparent range bias Δ<i>R</i> = -<i>c f<sub>d</sub></i> / (2 <i>k<sub>r</sub></i>). Transmitting alternating up- and down-chirps cancels this bias in the ideal static-range chirp-pair model.')
+        "<b>1. Interpretation:</b> At equal peak power, the 100 μs pulse carries 10× the energy. "
+        "Matched filtering converts that energy into about +10 dB output SNR without broadening the "
+        "compressed peak. The link and CFAR margins increase under the chosen illustrative parameters.<br/>"
+        "<b>2. Minimum Range Blind Zone:</b> Monostatic transmission blinds reception over <i>R</i><sub>min</sub> = <i>c</i> <i>τ<sub>p</sub></i> / 2. "
+        "For <i>τ</i> = 100 μs, <i>R</i><sub>min</sub> = 15.0 km (versus 1.5 km for 10 μs). A mixed short/long-pulse schedule is one possible design response.<br/>"
+        "<b>3. Doppler Shift Coupling:</b> Target radial velocity <i>v<sub>r</sub></i> induces Doppler frequency <i>f<sub>d</sub></i> = 2<i>v<sub>r</sub></i> / <i>λ</i>, "
+        "causing an apparent range bias Δ<i>R</i> = -<i>c f<sub>d</sub></i> / (2 <i>k<sub>r</sub></i>). Transmitting alternating up- and down-chirps "
+        "can reduce this bias and estimate target velocity.<br/>"
+        "<b>4. Scope:</b> This is an AWGN point-target simulation, not a field measurement. Clutter, "
+        "propagation, fluctuating RCS, and receiver imperfections can change detection performance. "
+        "Reproduce the core plots with <font name='Courier'>python track1_lfm_simulation.py</font> "
+        "and the 200-trial check included in the saved simulation results. The nominal CA-CFAR false-alarm model assumes independent cells, while oversampled filter outputs are correlated."
     )
-    story.append(Paragraph(sec4_text + result_text("<br/><b>Validation:</b> 200 production-chain trials: mean gain {{MC_MEAN}} dB; 95% CI for mean [{{MC_LOW}}, {{MC_HIGH}}] dB. Link parameters are assumptions, not verified radar specifications. CA-CFAR nominal Pfa assumes independent cells; this oversampled output is correlated. Peak SNR and sidelobes above are noisy single-run statistics."), body_style))
+    story.append(Paragraph(sec4_text, body_style))
 
     with atomic_output(doc.filename) as temporary:
         doc.filename = str(temporary)
